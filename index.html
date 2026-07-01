@@ -1,0 +1,2799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Producción · Séneca 2026 · T1</title>
+<script>
+  // Aplica el tema antes de pintar para evitar parpadeo
+  (function(){
+    try{
+      var t = localStorage.getItem('seneca-theme');
+      if(!t) t = 'light';                 // Cosmo: claro por defecto
+      document.documentElement.setAttribute('data-theme', t);
+    }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+  })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Spline+Sans+Mono:wght@400;500;600&display=swap');
+
+/* === Cosmo · tema CLARO (por defecto): ejecutivo, blanco cálido + naranja #fc7333 === */
+:root, [data-theme="light"]{
+  --bg:#f7f6f4; --panel:#ffffff; --panel2:#f1efec; --line:#e7e3dd;
+  --ink:#1f1b17; --ink2:#6b645c; --ink3:#9a938a;
+  --accent:#fc7333; --accent2:#2f6f8f; --warn:#d9534f; --pink:#c2557d;
+  --lab:#2f6f8f; --robot:#fc7333; --grid:#ece8e2;
+  --hdr-bg:rgba(247,246,244,.92);
+  --glow1:transparent; --glow2:transparent;
+  --barbg:rgba(252,115,51,.12); --hoverrow:rgba(252,115,51,.05);
+  --bar-lineas:rgba(47,111,143,.45); --bar-peso:rgba(252,115,51,.5);
+  --tag-lab-bg:rgba(47,111,143,.13);
+  --shadow:0 1px 3px rgba(40,25,10,.07);
+}
+/* === Cosmo · tema OSCURO (toggle): mismo esqueleto recoloreado a naranja === */
+[data-theme="dark"]{
+  --bg:#16130f; --panel:#211c16; --panel2:#2a241c; --line:#392f24;
+  --ink:#f0ebe3; --ink2:#a89d8f; --ink3:#73695c;
+  --accent:#fc7333; --accent2:#5bb0c9; --warn:#e8736f; --pink:#d97aa0;
+  --lab:#5bb0c9; --robot:#fc7333; --grid:#322a20;
+  --hdr-bg:rgba(22,19,15,.88);
+  --glow1:rgba(252,115,51,.06); --glow2:transparent;
+  --barbg:rgba(252,115,51,.16); --hoverrow:rgba(252,115,51,.06);
+  --bar-lineas:rgba(91,176,201,.45); --bar-peso:rgba(252,115,51,.55);
+  --tag-lab-bg:rgba(91,176,201,.15);
+  --shadow:0 1px 2px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Archivo',sans-serif; line-height:1.4;
+  background-image:radial-gradient(circle at 15% 0%, var(--glow1), transparent 40%),
+                   radial-gradient(circle at 85% 10%, var(--glow2), transparent 35%);
+  min-height:100vh; padding:0 0 60px;
+  transition:background-color .3s ease, color .3s ease;
+}
+.mono{font-family:'Spline Sans Mono',monospace}
+header{
+  border-bottom:1px solid var(--line); padding:11px 32px 0;
+  position:sticky; top:0; backdrop-filter:blur(12px); z-index:50;
+  background-color:var(--hdr-bg);
+}
+.htop{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px}
+.brand{display:flex; align-items:center; gap:12px}
+.logo{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  font-weight:900;font-size:16px;background:var(--accent);color:#fff}
+h1{font-size:17px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.sub{color:var(--ink3);font-size:11px;letter-spacing:.07em;text-transform:uppercase}
+.sub-row{display:flex;align-items:center;gap:12px;margin-top:3px;flex-wrap:wrap}
+.htop-ctrl{display:flex;align-items:center;gap:10px}
+.period{font-size:12px;color:var(--ink2)}
+.period b{color:var(--accent2)}
+.gen{font-size:10px;color:var(--ink3)}
+.integrity{font-size:10px;display:flex;align-items:center;gap:6px;cursor:default;position:relative}
+.integrity .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.integrity.ok .dot{background:var(--accent2);box-shadow:0 0 6px var(--accent2)}
+.integrity.warn .dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+.integrity .txt{color:var(--ink3)}
+.integrity.warn .txt{color:var(--warn);font-weight:600}
+.integrity .detail{
+  position:absolute;left:0;top:100%;margin-top:6px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:12px 14px;font-size:11px;color:var(--ink2);box-shadow:var(--shadow);
+  max-width:320px;text-align:left;line-height:1.5;display:none;z-index:60;white-space:normal
+}
+.integrity:hover .detail{display:block}
+.integrity .detail b{color:var(--ink)}
+.integrity .detail .al{color:var(--warn);display:block;margin-top:4px}
+.integrity .detail .info{color:var(--accent2);display:block;margin-top:4px}
+
+.theme-btn{
+  width:40px;height:40px;border:1px solid var(--line);background:var(--panel);
+  border-radius:11px;color:var(--ink2);cursor:pointer;display:grid;place-items:center;
+  transition:.2s;flex-shrink:0;box-shadow:var(--shadow)
+}
+.theme-btn:hover{color:var(--accent2);border-color:var(--accent2);transform:translateY(-1px)}
+.theme-btn svg{position:absolute;transition:opacity .25s, transform .35s}
+.theme-btn{position:relative}
+[data-theme="dark"] .ic-sun{opacity:1;transform:rotate(0)}
+[data-theme="dark"] .ic-moon{opacity:0;transform:rotate(-90deg)}
+[data-theme="light"] .ic-sun{opacity:0;transform:rotate(90deg)}
+[data-theme="light"] .ic-moon{opacity:1;transform:rotate(0)}
+
+/* Barra única: navegación (pestañas) + filtros, dentro de la cabecera sticky */
+.navbar{display:flex;align-items:center;justify-content:space-between;gap:10px 20px;flex-wrap:wrap;
+  margin-top:8px;border-top:1px solid var(--line)}
+.tabs{display:flex;gap:2px}
+.tab{padding:10px 14px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;
+  border:none;background:none;border-bottom:2px solid transparent;transition:.2s}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.filterbar{display:flex;align-items:center;gap:9px;padding:7px 0;flex-wrap:wrap}
+.filterbar .period{margin-left:6px;padding-left:12px;border-left:1px solid var(--line)}
+.flabel{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);font-weight:600}
+.chip{padding:6px 13px;border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:30px;font-size:12.5px;cursor:pointer;font-weight:600;transition:.15s;font-family:'Spline Sans Mono',monospace}
+.chip:hover{border-color:var(--accent2);color:var(--ink)}
+.chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chip.ytd-chip{margin-left:10px;border-color:var(--accent2);color:var(--accent2)}
+.chip.ytd-chip.active{background:var(--accent2);color:var(--bg);border-color:var(--accent2)}
+.chip.cmp-loc{display:inline-flex;align-items:center;gap:6px}
+.chip.cmp-loc .loc-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;opacity:.55;transition:.15s}
+.chip.cmp-loc.active .loc-dot{opacity:1}
+.chip.cmp-loc:not(.active){opacity:.5}
+.chip.robot-chip{border-color:#c2541f;color:#c2541f}
+.chip.robot-chip.active{background:#c2541f;color:#fff;border-color:#c2541f}
+.chip.robot-chip:not(.active){opacity:.6}
+
+main{padding:18px 32px 0;max-width:1500px;margin:0 auto}
+/* Barra de control propia de una página (p. ej. selector de años en Tendencias) — arriba, como los filtros */
+.page-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:12px 16px;margin-bottom:16px;box-shadow:var(--shadow)}
+/* Comparativa: filtros en DOS filas fijas (período arriba, tipos abajo). Sin scroll;
+   si los años llegaran a no caber, bajan de línea dentro de su propia fila. */
+.cmp-controls{flex-direction:column;align-items:stretch;gap:10px}
+.cmp-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px}
+.cmp-row+.cmp-row{border-top:1px solid var(--line);padding-top:10px}
+.cmp-row .fgroup{display:flex;align-items:center;gap:8px}
+.cmp-row .fgroup>div{display:flex;flex-wrap:wrap;gap:6px}
+.cmp-row .chip{white-space:nowrap}
+.page{display:none;animation:fade .35s ease}
+.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.grid{display:grid;gap:16px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:.7}
+.card.c2::before{background:var(--accent2)}
+.card.c3::before{background:var(--warn)}
+.card.c4::before{background:var(--pink)}
+.kpi-l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);font-weight:600;margin-bottom:8px}
+.kpi-v{font-size:32px;font-weight:800;letter-spacing:-.03em;font-family:'Spline Sans Mono',monospace;line-height:1}
+.kpi-s{font-size:12px;color:var(--ink2);margin-top:6px}
+.kpi-d{font-size:12px;font-weight:700;font-family:'Spline Sans Mono',monospace;margin-top:8px;display:flex;align-items:center;gap:5px}
+.kpi-d.up{color:#3e9e5f}
+.kpi-d.down{color:var(--warn)}
+.kpi-d.flat{color:var(--ink3)}
+.kpi-d .prev{color:var(--ink3);font-weight:500;font-family:'Archivo',sans-serif}
+.insight-band{position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:14px 18px 14px 22px;margin-bottom:16px;font-size:14px;color:var(--ink2);
+  box-shadow:var(--shadow);line-height:1.55}
+.insight-band::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.insight-band b{color:var(--ink);font-weight:700}
+.insight-band .up{color:#3e9e5f;font-weight:700;font-family:'Spline Sans Mono',monospace}
+.insight-band .down{color:var(--warn);font-weight:700;font-family:'Spline Sans Mono',monospace}
+.insight-band .ico{color:var(--accent);margin-right:8px}
+
+.row2{grid-template-columns:1fr 1fr}
+.row3{grid-template-columns:2fr 1fr}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.panel h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);margin-bottom:16px;font-weight:700;
+  display:flex;align-items:center;gap:8px}
+.panel h3::before{content:'';width:6px;height:6px;background:var(--accent);border-radius:50%}
+.chartbox{position:relative;height:300px}
+.chartbox.tall{height:360px}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--ink3);border-bottom:1px solid var(--line);font-weight:700}
+th.num,td.num{text-align:right;font-family:'Spline Sans Mono',monospace}
+td{padding:10px 12px;border-bottom:1px solid rgba(42,49,60,.5)}
+tr:hover td{background:var(--hoverrow)}
+.bar-cell{position:relative}
+.bar-bg{position:absolute;left:0;top:50%;transform:translateY(-50%);height:60%;background:var(--barbg);border-radius:3px;z-index:0}
+.bar-cell span{position:relative;z-index:1}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;font-family:'Spline Sans Mono',monospace}
+.tag.lab{background:var(--tag-lab-bg);color:var(--accent2)}
+
+.split{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.donut-legend{display:flex;flex-direction:column;gap:8px;flex:1;min-width:160px}
+.leg-item{display:flex;align-items:center;gap:10px;font-size:13px}
+.leg-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+.leg-item .n{margin-left:auto;font-family:'Spline Sans Mono',monospace;font-weight:600;color:var(--ink)}
+footer{text-align:center;color:var(--ink3);font-size:11px;margin-top:40px;padding-top:20px;letter-spacing:.05em}
+.note{color:var(--ink3);font-size:11px;margin-top:6px}
+
+#status{padding:40px 32px;max-width:1500px;margin:0 auto}
+.banner{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px 32px}
+.banner.err{border-color:var(--pink)}
+.banner h2{font-size:16px;margin-bottom:10px}
+.banner code{font-family:'Spline Sans Mono',monospace;background:var(--panel2);padding:2px 7px;border-radius:5px;color:var(--accent2)}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;animation:rot .7s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* === Mapa de calor (responsable × mes) === */
+.heat{width:100%;overflow-x:auto}
+.heat table{border-collapse:separate;border-spacing:3px}
+.heat th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);padding:4px 8px;font-weight:700;text-align:center}
+.heat th.rowh{text-align:left;min-width:120px}
+.heat td{text-align:center;padding:0}
+.heat .cell{display:block;min-width:62px;padding:9px 6px;border-radius:7px;font-family:'Spline Sans Mono',monospace;
+  font-size:12px;font-weight:600;color:var(--ink);transition:.15s}
+.heat .cell.empty{color:var(--ink3);background:var(--panel2)!important}
+.heat .rowlabel{text-align:left;font-size:12px;color:var(--ink2);padding-right:10px;white-space:nowrap;font-weight:600}
+
+/* === Toolbar de tablas (búsqueda + chips) === */
+.tbl-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;padding:9px 14px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--ink);border-radius:10px;font-size:13px;font-family:'Archivo',sans-serif}
+.search:focus{outline:none;border-color:var(--accent2)}
+.search::placeholder{color:var(--ink3)}
+.minichips{display:flex;gap:6px;flex-wrap:wrap}
+.minichip{padding:5px 12px;border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:20px;font-size:12px;cursor:pointer;font-weight:600;font-family:'Spline Sans Mono',monospace;transition:.15s}
+.minichip:hover{border-color:var(--accent2);color:var(--ink)}
+.minichip.active{background:var(--accent2);color:var(--bg);border-color:var(--accent2)}
+.tbl-scroll{max-height:560px;overflow-y:auto;border-radius:8px}
+.tbl-scroll thead th{position:sticky;top:0;background:var(--panel);z-index:2}
+
+/* Pista de tipo (chip pequeño en tablas) */
+.tipo-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;
+  font-family:'Spline Sans Mono',monospace;white-space:nowrap}
+.tec-mas{display:inline-block;font-size:10px;font-weight:700;color:var(--accent2);background:var(--tag-lab-bg);
+  border-radius:10px;padding:0 5px;margin-left:3px;cursor:help;font-family:'Spline Sans Mono',monospace}
+
+/* === Aviso de datos pendientes (data.json sin regenerar) === */
+.regen{border:1px dashed var(--warn);background:rgba(255,138,92,.06);border-radius:12px;
+  padding:18px 20px;color:var(--ink2);font-size:13px;line-height:1.55}
+.regen b{color:var(--warn)}
+.regen code{font-family:'Spline Sans Mono',monospace;background:var(--panel2);padding:2px 7px;border-radius:5px;color:var(--accent2)}
+
+/* === Página Metodología === */
+.method-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.method-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.method-card .step{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;
+  background:var(--barbg);color:var(--accent);font-weight:800;font-family:'Spline Sans Mono',monospace;font-size:13px;margin-bottom:10px}
+.method-card h4{font-size:15px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
+.method-card p{color:var(--ink2);font-size:13px;line-height:1.55}
+.method-card ul{color:var(--ink2);font-size:13px;line-height:1.6;margin:10px 0 0;padding-left:18px}
+.method-card code{font-family:'Spline Sans Mono',monospace;background:var(--panel2);padding:1px 6px;border-radius:4px;color:var(--accent2);font-size:12px}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--ink2)}
+.flow span{padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+.flow i{color:var(--accent);font-style:normal;font-weight:800}
+
+/* === Selector de idioma === */
+.lang-sw{display:flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow);height:40px}
+.lang-sw button{border:none;background:none;color:var(--ink3);padding:0 10px;cursor:pointer;font-size:12px;font-weight:700;
+  font-family:'Spline Sans Mono',monospace;transition:.15s;border-left:1px solid var(--line)}
+.lang-sw button:first-child{border-left:none}
+.lang-sw button:hover{color:var(--ink)}
+.lang-sw button.active{background:var(--accent);color:#fff}
+
+/* === Selector de centro === */
+.center-sw{display:flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow);height:40px}
+.center-sw button{border:none;background:none;color:var(--ink2);padding:0 14px;cursor:pointer;font-size:12px;font-weight:700;
+  font-family:'Archivo',sans-serif;transition:.15s;border-left:1px solid var(--line);white-space:nowrap}
+.center-sw button:first-child{border-left:none}
+.center-sw button:hover{color:var(--ink)}
+.center-sw button.active{background:var(--accent2);color:var(--bg)}
+
+/* === Pestaña Tendencias === */
+.trend-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.trend-tools .flabel{margin-right:-4px}
+.yoy-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:16px}
+.yoy-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.yoy-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent2);opacity:.7}
+.yoy-l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);font-weight:600;margin-bottom:8px}
+.yoy-v{font-size:26px;font-weight:800;letter-spacing:-.03em;font-family:'Spline Sans Mono',monospace;line-height:1}
+.yoy-d{font-size:13px;margin-top:7px;font-family:'Spline Sans Mono',monospace;font-weight:600;display:flex;align-items:center;gap:5px}
+.yoy-d.up{color:var(--accent)}
+.yoy-d.down{color:var(--pink)}
+.yoy-d.flat{color:var(--ink3)}
+.yoy-d .prev{color:var(--ink3);font-weight:400}
+.partial-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
+  font-family:'Spline Sans Mono',monospace;background:rgba(255,138,92,.15);color:var(--warn);vertical-align:middle;letter-spacing:.03em}
+.cmp-arrow{font-size:11px}
+.rank3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:1100px){.rank3{grid-template-columns:1fr}}
+.minichip.fc{margin-left:10px;border-color:var(--warn);color:var(--warn)}
+.minichip.fc.active{background:var(--warn);color:var(--bg);border-color:var(--warn)}
+#yoyYtdToggle{border-color:var(--accent2);color:var(--accent2)}
+#yoyYtdToggle.active{background:var(--accent2);color:var(--bg);border-color:var(--accent2)}
+.cmp-divider{display:flex;align-items:center;gap:14px;margin:26px 0 16px}
+.cmp-divider::before,.cmp-divider::after{content:'';height:1px;background:var(--line);flex:1}
+.cmp-divider-label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink3);font-weight:700;
+  font-family:'Spline Sans Mono',monospace;white-space:nowrap}
+.cmp-pesaje-head{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.cmp-pes-card{flex:1;min-width:240px;font-size:13px;color:var(--ink2);background:var(--panel2);
+  border-radius:10px;padding:11px 15px;position:relative;overflow:hidden}
+.cmp-pes-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.cmp-pes-card.sen::before{background:var(--accent)}
+.cmp-pes-card.gra::before{background:var(--accent2)}
+.cmp-pes-card b{color:var(--ink)}
+</style>
+</head>
+<body>
+<header>
+  <div class="htop">
+    <div class="brand">
+      <div class="logo" id="brandLogo">S</div>
+      <div>
+        <h1 data-i18n="h1">Producción de Fórmulas</h1>
+        <div class="sub-row">
+          <span class="sub" id="brandSub" data-i18n="sub">Séneca 2026 · Primer Trimestre</span>
+          <span class="gen" id="genLabel"></span>
+          <span class="integrity" id="integrity" style="display:none"></span>
+        </div>
+      </div>
+    </div>
+    <div class="htop-ctrl">
+      <div class="center-sw" id="centerSwitch" style="display:none"></div>
+      <div class="lang-sw" id="langSwitch">
+        <button data-lang="es">ES</button><button data-lang="en">EN</button><button data-lang="fr">FR</button>
+      </div>
+      <button id="exportBtn" class="theme-btn" title="Exportar PDF" aria-label="Exportar PDF">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+      </button>
+      <button id="themeToggle" class="theme-btn" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="navbar">
+    <div class="tabs" id="tabs" style="display:none">
+      <button class="tab active" data-page="resumen" data-modelos="formulas,samples" data-i18n="tab_resumen">Resumen ejecutivo</button>
+      <button class="tab" data-page="perfumers" data-modelos="formulas" data-i18n="tab_perfumers">Perfumistas</button>
+      <button class="tab" data-page="proyectos" data-modelos="formulas" data-i18n="tab_proyectos">Proyectos</button>
+      <button class="tab" data-page="ingredientes" data-modelos="formulas" data-i18n="tab_ingredientes">Ingredientes y trazabilidad</button>
+      <button class="tab" data-page="materias" data-modelos="samples" data-i18n="tab_materias">Materias primas</button>
+      <button class="tab" data-page="tendencias" data-modelos="formulas,samples" data-i18n="tab_tendencias">Tendencias</button>
+      <button class="tab" data-page="interanual" data-modelos="formulas,samples" data-i18n="tab_interanual">Interanual</button>
+      <button class="tab" data-page="comparativa" data-modelos="formulas,samples" data-needs-centers="2" data-i18n="tab_comparativa">Comparativa de centros</button>
+    </div>
+    <div class="filterbar" id="filterbar" style="display:none">
+      <span class="flabel" data-i18n="filter_year">Año</span>
+      <div id="yearChips"></div>
+      <span class="flabel" data-i18n="filter_month">Mes</span>
+      <div id="monthChips"></div>
+      <div class="period" id="periodWrap"><span data-i18n="period">Periodo</span> <b id="periodLabel">—</b> · <span id="rowcount" class="mono"></span> <span data-i18n="lines">líneas</span></div>
+    </div>
+  </div>
+</header>
+
+<div id="status">
+  <div class="banner"><span class="spin"></span><span data-i18n="loading">Cargando datos desde</span> <code>data/data.json</code>…</div>
+</div>
+
+<main id="app" style="display:none">
+  <section class="page active" id="page-resumen">
+    <div class="insight-band" id="insightBand" style="display:none"></div>
+    <!-- Resumen modelo "formulas" (Séneca) -->
+    <div id="resumenFormulas">
+      <div class="grid kpis" id="kpisResumen"></div>
+      <div class="grid row3" style="margin-bottom:16px">
+        <div class="panel">
+          <h3 data-i18n="panel_evol">Evolución mensual · líneas y fórmulas</h3>
+          <div class="chartbox"><canvas id="chEvol"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3 data-i18n="panel_tipos">Tipos de fórmula</h3>
+          <div class="split">
+            <div style="width:170px;height:170px"><canvas id="chTipos"></canvas></div>
+            <div class="donut-legend" id="legTipos"></div>
+          </div>
+        </div>
+      </div>
+      <div class="grid row2">
+        <div class="panel">
+          <h3 data-i18n="panel_labrobot">Reparto Lab vs Robot</h3>
+          <div class="chartbox"><canvas id="chLabRobot"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3 data-i18n="panel_peso">Peso de ingrediente procesado por mes (g)</h3>
+          <div class="chartbox"><canvas id="chPeso"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <!-- Resumen modelo "samples" (Granollers) -->
+    <div id="resumenSamples" style="display:none">
+      <div class="grid kpis" id="kpisSamples"></div>
+      <div class="grid row2">
+        <div class="panel">
+          <h3 data-i18n="panel_gra_evol">Evolución mensual</h3>
+          <div class="trend-tools">
+            <span class="flabel" data-i18n="trend_metric">Métrica</span>
+            <div id="graMetricChips" class="minichips"></div>
+          </div>
+          <div class="chartbox tall"><canvas id="chGraEvol"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3 data-i18n="panel_gra_prodsample">Producción vs muestras por mes</h3>
+          <div class="chartbox tall"><canvas id="chGraProdSample"></canvas></div>
+          <div class="note" data-i18n="note_gra_prodsample">Órdenes de producción y de muestra por mes (eje doble).</div>
+        </div>
+      </div>
+      <div class="cmp-divider"><span class="cmp-divider-label" data-i18n="gra_pesaje_section">Pesaje y estaciones</span></div>
+      <div class="trend-tools" style="margin-bottom:14px;gap:10px 16px">
+        <span class="flabel" data-i18n="filter_tipo">Tipo de pesaje</span>
+        <div id="weighTipoChips" class="minichips"></div>
+        <span class="flabel" data-i18n="filter_estacion">Estación</span>
+        <div id="estSelChips" class="minichips"></div>
+      </div>
+      <div class="panel" id="estEvolPanel" style="display:none;margin-bottom:16px">
+        <h3 id="estEvolTitle">·</h3>
+        <div class="chartbox tall"><canvas id="chEstEvol"></canvas></div>
+        <div class="note" data-i18n="note_est_evol">Pesadas (barras) y peso dosificado (línea) de la estación seleccionada a lo largo del periodo. Respeta el filtro de tipo.</div>
+      </div>
+      <div class="grid row2">
+        <div class="panel">
+          <h3 data-i18n="panel_gra_mr">Pesaje manual vs robot</h3>
+          <div class="trend-tools">
+            <span class="flabel" data-i18n="granularity">Detalle</span>
+            <div id="mrGranChips" class="minichips"></div>
+          </div>
+          <div class="chartbox tall"><canvas id="chGraMR"></canvas></div>
+          <div class="note" data-i18n="note_gra_mr">Nº de pesadas: estaciones manuales (MWS) vs robot (ROXY). Fuente: Exportación MANUAL.</div>
+        </div>
+        <div class="panel">
+          <h3 data-i18n="panel_gra_estaciones">Carga por estación de pesaje</h3>
+          <div class="chartbox tall"><canvas id="chGraEstaciones"></canvas></div>
+          <div class="note" data-i18n="note_gra_estaciones">Pesadas por puesto en el periodo seleccionado: robots (ROXY) + estaciones manuales (MWS).</div>
+        </div>
+      </div>
+
+      <div class="cmp-divider"><span class="cmp-divider-label" data-i18n="gra_est_section">Detalle por estación manual (MWS)</span></div>
+      <div class="grid row2">
+        <div class="panel">
+          <h3 data-i18n="panel_est_pesadas">Pesadas por estación manual</h3>
+          <div class="chartbox tall"><canvas id="chEstPesadas"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3 data-i18n="panel_est_peso">Peso dosificado por estación manual (g)</h3>
+          <div class="chartbox tall"><canvas id="chEstPeso"></canvas></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h3 data-i18n="panel_est_ordenes">Órdenes de muestra por estación manual</h3>
+        <div class="trend-tools">
+          <span class="flabel" data-i18n="granularity">Detalle</span>
+          <div id="estOrdGranChips" class="minichips"></div>
+        </div>
+        <div class="chartbox tall"><canvas id="chEstOrdenes"></canvas></div>
+        <div class="note" data-i18n="note_est_ordenes">Órdenes de muestra distintas atendidas por cada técnico. Mensual o diario (diario filtra por el periodo elegido).</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-materias">
+    <div class="grid row2">
+      <div class="panel">
+        <h3 data-i18n="panel_mp_prod">Materias primas · producción</h3>
+        <div id="mpProdContent">
+          <div class="tbl-toolbar"><input id="mpProdSearch" class="search" data-i18n-ph="ph_mp" placeholder="Buscar materia prima o código…"></div>
+          <div class="tbl-scroll"><table id="tblMpProd"></table></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3 data-i18n="panel_mp_samples">Materias primas · sample requests</h3>
+        <div id="mpSampContent">
+          <div class="tbl-toolbar"><input id="mpSampSearch" class="search" data-i18n-ph="ph_mp" placeholder="Buscar materia prima o código…"></div>
+          <div class="tbl-scroll"><table id="tblMpSamp"></table></div>
+        </div>
+      </div>
+    </div>
+    <div class="note" data-i18n="note_mp">Top 25 materias primas de 2025 por número de pesadas. Fuente: Roxane (hoja Stats MP).</div>
+  </section>
+
+  <section class="page" id="page-perfumers">
+    <div class="grid kpis" id="kpisPerf"></div>
+    <div class="grid row2">
+      <div class="panel">
+        <h3 data-i18n="panel_perf">Fórmulas trabajadas por responsable</h3>
+        <div class="chartbox tall"><canvas id="chPerf"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3 data-i18n="panel_perftipo">Tipos de fórmula por responsable</h3>
+        <div class="chartbox tall"><canvas id="chPerfTipo"></canvas></div>
+        <div class="note" data-i18n="note_perftipo">Completas · Bases · Trials · Disoluciones (fórmulas distintas, apiladas)</div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h3 data-i18n="panel_heat">Mapa de calor · fórmulas por responsable y mes</h3>
+      <div id="heatPerf" class="heat"></div>
+      <div class="note" data-i18n="note_heat">Intensidad = nº de fórmulas trabajadas en cada mes del T1. Independiente del filtro de mes.</div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h3 data-i18n="panel_perfdetalle">Detalle por responsable de fórmula</h3>
+      <table id="tblPerf"></table>
+    </div>
+  </section>
+
+  <section class="page" id="page-proyectos">
+    <div class="grid kpis" id="kpisProy"></div>
+    <div class="panel">
+      <h3 data-i18n="panel_proy">Proyectos · fórmulas evaluadas</h3>
+      <div id="proyContent">
+        <div class="tbl-toolbar">
+          <input id="proySearch" class="search" data-i18n-ph="ph_proy" placeholder="Buscar por código, nombre o responsable…">
+          <div id="proyTipoChips" class="minichips"></div>
+        </div>
+        <div class="tbl-scroll"><table id="tblProy"></table></div>
+        <div class="note" id="proyCount"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-ingredientes">
+    <div class="grid kpis" id="kpisIngr"></div>
+    <div class="grid row2" style="margin-bottom:16px">
+      <div class="panel">
+        <h3 data-i18n="panel_lab">Carga de trabajo por técnico de laboratorio</h3>
+        <div class="chartbox tall"><canvas id="chLab"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3 data-i18n="panel_ingr">Top 12 ingredientes más utilizados</h3>
+        <div class="chartbox tall"><canvas id="chIngr"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 data-i18n="panel_labtraza">Trazabilidad · técnicos de laboratorio</h3>
+      <table id="tblLab"></table>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h3 data-i18n="panel_lotes">Trazabilidad por lote de ingrediente</h3>
+      <div id="lotesContent">
+        <div class="tbl-toolbar">
+          <input id="lotesSearch" class="search" data-i18n-ph="ph_lotes" placeholder="Buscar por ingrediente, código o lote…">
+        </div>
+        <div class="tbl-scroll"><table id="tblLotes"></table></div>
+        <div class="note" data-i18n="note_lotes">Top 80 lotes por número de líneas en el periodo seleccionado.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-tendencias">
+    <div class="panel" style="margin-bottom:16px">
+      <h3 data-i18n="panel_seasonal">Estacionalidad mensual · una línea por año</h3>
+      <div class="trend-tools">
+        <span class="flabel" data-i18n="trend_metric">Métrica</span>
+        <div id="seasonMetricChips" class="minichips"></div>
+      </div>
+      <div class="chartbox tall"><canvas id="chSeasonal"></canvas></div>
+      <div class="note" id="seasonalNote" data-i18n="note_seasonal">Cada línea es un año; el eje X son los meses. Permite ver patrones estacionales y qué años van por encima.</div>
+    </div>
+    <div class="panel tend-only-formulas" id="ingrFcPanel" style="margin-bottom:16px">
+      <h3 data-i18n="panel_ingrfc">Previsión de demanda de ingredientes · año vigente</h3>
+      <div class="trend-tools">
+        <span class="flabel" data-i18n="trend_metric">Métrica</span>
+        <div id="ingrFcMetricChips" class="minichips"></div>
+        <input id="ingrFcSearch" class="search" data-i18n-ph="ph_ingrfc" placeholder="Buscar ingrediente o código…" style="max-width:280px">
+      </div>
+      <div class="tbl-scroll"><table id="tblIngrFc"></table></div>
+      <div class="note" id="ingrFcNote"></div>
+    </div>
+    <div class="grid row2 tend-only-formulas">
+      <div class="panel">
+        <h3 data-i18n="panel_comptipos">Composición por tipo de fórmula y año</h3>
+        <div class="chartbox tall"><canvas id="chCompTipos"></canvas></div>
+        <div class="note" data-i18n="note_comptipos">% de fórmulas distintas por tipo en cada año.</div>
+      </div>
+      <div class="panel">
+        <h3 data-i18n="panel_complabrobot">Reparto Lab vs Robot por año</h3>
+        <div class="chartbox tall"><canvas id="chCompLabRobot"></canvas></div>
+        <div class="note" data-i18n="note_complabrobot">% de líneas Lab vs Robot en cada año.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-interanual">
+    <div class="page-controls">
+      <span class="flabel" data-i18n="trend_compare">Comparar</span>
+      <div id="yoyYearChips" class="minichips"></div>
+      <span class="flabel" data-i18n="trend_vs">frente a</span>
+      <div id="yoyPrevChips" class="minichips"></div>
+      <button class="minichip fc" id="yoyYtdToggle" data-i18n="yoy_ytd_toggle">◷ Hasta mes vigente</button>
+    </div>
+    <div class="panel" style="margin-bottom:16px">
+      <h3 data-i18n="panel_yoy">Variación interanual</h3>
+      <div class="yoy-grid" id="yoyCards"></div>
+      <div class="note" id="yoyNote"></div>
+    </div>
+    <div class="panel inter-only-samples" style="margin-bottom:16px">
+      <h3 data-i18n="panel_rankest">Ranking de estaciones · variación entre años</h3>
+      <div class="tbl-scroll"><table id="tblRankEst"></table></div>
+      <div class="note" data-i18n="note_rankest">Pesadas (robot ROXY + manual MWS) por estación en los dos años comparados.</div>
+    </div>
+    <div class="panel tend-only-formulas" style="margin-bottom:16px">
+      <h3 data-i18n="panel_ranklab">Carga de trabajo por técnico de laboratorio · variación entre años</h3>
+      <div class="chartbox tall"><canvas id="chCompLab"></canvas></div>
+      <div class="note" data-i18n="note_ranklab">Líneas procesadas por cada técnico en los dos años comparados.</div>
+    </div>
+    <div class="grid rank3 tend-only-formulas" style="margin-top:16px">
+      <div class="panel">
+        <h3 data-i18n="panel_rankperf">Ranking de responsables · variación entre años</h3>
+        <div class="tbl-scroll"><table id="tblRankPerf"></table></div>
+      </div>
+      <div class="panel">
+        <h3 data-i18n="panel_ranklabtbl">Ranking de técnicos · variación entre años</h3>
+        <div class="tbl-scroll"><table id="tblRankLab"></table></div>
+      </div>
+      <div class="panel">
+        <h3 data-i18n="panel_rankingr">Ranking de ingredientes · variación entre años</h3>
+        <div class="tbl-scroll"><table id="tblRankIngr"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page-comparativa">
+    <div class="page-controls cmp-controls">
+      <div class="cmp-row">
+        <div class="fgroup"><span class="flabel" data-i18n="filter_year">Año</span><div id="cmpYearChips"></div></div>
+        <div class="fgroup" id="cmpMonthGroup"><span class="flabel" data-i18n="filter_month">Mes</span><div id="cmpMonthChips"></div></div>
+      </div>
+      <div class="cmp-row">
+        <div class="fgroup"><span class="flabel" data-i18n="filter_location">Ubicaciones</span><div id="cmpCentroChips"></div></div>
+        <div class="fgroup"><span class="flabel" data-i18n="filter_pesaje">Pesaje</span><div id="cmpRobotChips"></div></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:16px">
+      <h3 data-i18n="panel_cmp_evol">Evolución comparada · pesadas por mes</h3>
+      <div class="chartbox tall"><canvas id="chCmpEvol"></canvas></div>
+      <div class="note" data-i18n="note_cmp_evol">Pesadas mensuales de cada centro en la misma escala (Séneca: líneas de ingrediente = pesadas; Granollers: pesadas manual + robot). Misma unidad → comparable directamente.</div>
+    </div>
+    <div class="panel" style="margin-bottom:16px">
+      <h3 data-i18n="panel_cmp_pesaje">Carga de pesaje por ubicación</h3>
+      <div class="cmp-pesaje-head" id="cmpPesajeHead"></div>
+      <div class="grid" id="cmpPesajeGrid"></div>
+      <div class="note" data-i18n="note_cmp_pesaje">Una "línea" en Séneca/Dubai equivale a una pesada de ingrediente, comparable con las pesadas de Granollers. Séneca/Dubai: técnicos (personas). Granollers: 4 robots (ROXY) + estaciones manuales (MWS).</div>
+    </div>
+    <div class="cmp-divider"><span class="cmp-divider-label" data-i18n="cmp_ingr_section">Consumo de ingredientes · acumulado</span></div>
+    <div class="panel" style="margin-bottom:16px">
+      <h3 data-i18n="panel_cmp_ingr">Comparativa de centros · consumo de ingredientes por peso (g)</h3>
+      <div class="trend-tools">
+        <input id="cmpSearch" class="search" data-i18n-ph="ph_cmp" placeholder="Buscar ingrediente o código…" style="max-width:300px">
+      </div>
+      <div class="chartbox" style="height:460px"><canvas id="chCmpIngr"></canvas></div>
+      <div class="note" id="cmpNote"></div>
+    </div>
+    <div class="panel">
+      <h3 data-i18n="panel_cmp_tabla">Detalle comparativo</h3>
+      <div class="tbl-scroll"><table id="tblCmp"></table></div>
+    </div>
+  </section>
+
+</main>
+
+<footer data-i18n="footer">
+  Powered by AI Strategy &amp; Data Analysis department
+</footer>
+
+<script>
+// === Internacionalización (ES / EN / FR) ===
+const LOCALES = {es:'es-ES', en:'en-US', fr:'fr-FR'};
+let LANG = 'es';
+const fmt  = n => (n==null ? '—' : n.toLocaleString(LOCALES[LANG]));
+const fmt1 = n => (n==null ? '—' : n.toLocaleString(LOCALES[LANG],{maximumFractionDigits:1}));
+
+const MESES_I18N = {
+  es:['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+  en:['January','February','March','April','May','June','July','August','September','October','November','December'],
+  fr:['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+};
+function mesLabel(ym){ if(!ym) return '—'; const n=parseInt(ym.slice(5,7),10)-1; return (MESES_I18N[LANG]||MESES_I18N.es)[n] || ym; }
+// Traduce un nombre de mes que ya viene en español (serieMensual.label) al idioma activo
+function mesLabelEs(esLabel){ const i=MESES_I18N.es.indexOf(esLabel); return i>=0 ? (MESES_I18N[LANG]||MESES_I18N.es)[i] : esLabel; }
+
+// Etiqueta VISIBLE de los tipos de fórmula. Las claves internas siguen en español (como en el JSON),
+// para no romper filtros ni tipoColor(); solo se traduce lo que ve el usuario.
+const TIPO_I18N = {
+  en:{'Fórmula completa':'Complete formula','Disoluciones':'Dilutions','Trial':'Trial','Base':'Base','Base + Trial':'Base + Trial'},
+  fr:{'Fórmula completa':'Formule complète','Disoluciones':'Dilutions','Trial':'Trial','Base':'Base','Base + Trial':'Base + Trial'}
+};
+function tTipo(x){ return LANG==='es' ? x : ((TIPO_I18N[LANG]&&TIPO_I18N[LANG][x])||x); }
+
+const I18N = {
+  es:{
+    title:`Producción · Séneca`, h1:`Producción de Fórmulas`, sub:`Séneca · Barcelona`,
+    period:`Periodo`, lines:`líneas`, themeTitle:`Cambiar tema`, export_title:`Exportar vista a PDF`, export_err:`No se pudo generar el PDF.`,
+    tab_resumen:`Resumen ejecutivo`, tab_perfumers:`Perfumistas`, tab_proyectos:`Proyectos`, tab_ingredientes:`Ingredientes y trazabilidad`, tab_materias:`Materias primas`, tab_tendencias:`Tendencias`, tab_interanual:`Interanual`, tab_comparativa:`Comparativa de centros`,
+    panel_cmp_ingr:`Comparativa de centros · consumo de ingredientes por peso (g)`, panel_cmp_tabla:`Detalle comparativo`, ph_cmp:`Buscar ingrediente o código…`, th_ratio:`Ratio`,
+    panel_cmp_pesaje:`Carga de pesaje por ubicación`, cmp_pes_lineas:`líneas`, cmp_pes_pesadas:`pesadas`, cmp_pes_tecnicos:`técnicos`, cmp_pes_estaciones:`estaciones`, cmp_pes_media:`media`,
+    note_cmp_pesaje:`Una "línea" en Séneca equivale a una pesada de ingrediente, comparable con las pesadas de Granollers. Totales acumulados. Séneca: técnicos (personas). Granollers: 4 robots (ROXY) + estaciones manuales (MWS).`,
+    panel_cmp_evol:`Evolución comparada · pesadas por mes`, note_cmp_evol:`Pesadas mensuales de cada centro en la misma escala (Séneca: líneas de ingrediente = pesadas; Granollers: pesadas manual + robot). Misma unidad → comparable directamente.`,
+    cmp_ingr_section:`Consumo de ingredientes · acumulado (no depende del filtro de año)`,
+    cmp_note:`{n} ingredientes presentes en ambos centros. Solo se compara el PESO en gramos (única magnitud equivalente entre Dory y Roxane). Granollers: datos de materias primas de 2025. Ratio = peso {a} ÷ peso {b}.`,
+    cmp_note_n:`{n} ingredientes presentes en ≥2 centros ({centros}). Solo se compara el PESO en gramos (única magnitud equivalente entre centros). Granollers: materias primas 2025.`,
+    kpi_sampleorders:`Órdenes de muestra`, kpi_prodorders:`Órdenes de producción`, kpi_pours:`Pours`, kpi_samplesdia:`Muestras por día`, kpi_dias:`Días laborables`,
+    sub_muestras:`peticiones de muestra`, sub_ordenes:`órdenes de producción`, sub_pours:`dosificaciones`, sub_pordia:`media muestras/día`, sub_laborables:`en el periodo`,
+    m_sampleorders:`Muestras`, m_prodorders:`Órdenes prod.`, m_pours:`Pours`, m_samplesdia:`Muestras/día`,
+    panel_gra_evol:`Evolución mensual`, panel_gra_prodsample:`Producción vs muestras por mes`, note_gra_prodsample:`Órdenes de producción y de muestra por mes (eje doble).`,
+    panel_mp_prod:`Materias primas · producción`, panel_mp_samples:`Materias primas · sample requests`, ph_mp:`Buscar materia prima o código…`,
+    note_mp:`Top 25 materias primas de 2025 por número de pesadas. Fuente: Roxane (hoja Stats MP).`,
+    th_materia:`Materia prima`, th_pesadas:`Pesadas`,
+    ds_manual:`Manual`, kpi_pctrobot:`Automatización`, sub_robot:`robot`, sub_manual:`manual`,
+    granularity:`Detalle`, gran_mes:`Mes`, gran_dia:`Día`,
+    gra_est_section:`Detalle por estación manual (MWS)`,
+    panel_est_pesadas:`Pesadas por estación manual`, panel_est_peso:`Peso dosificado por estación manual (g)`,
+    panel_est_ordenes:`Órdenes de muestra por estación manual`, note_est_ordenes:`Órdenes de muestra distintas atendidas por cada técnico. Mensual, o diario (el diario requiere elegir un año o mes en el filtro).`,
+    panel_gra_mr:`Pesaje manual vs robot`, note_gra_mr:`Nº de pesadas: estaciones manuales (MWS) vs robot (ROXY). Fuente: Exportación MANUAL.`,
+    panel_gra_estaciones:`Carga por estación de pesaje`, note_gra_estaciones:`Pesadas por puesto en el periodo seleccionado: robots (ROXY) + estaciones manuales (MWS).`,
+    gra_pesaje_section:`Pesaje y estaciones`, filter_tipo:`Tipo de pesaje`, filter_estacion:`Estación`, est_all:`Todas`,
+    tipo_ambos:`Ambos`, tipo_prod:`Producción`, tipo_muestra:`Muestra`,
+    panel_est_evol:`Evolución de {e}`, note_est_evol:`Pesadas (barras) y peso dosificado (línea) de la estación seleccionada a lo largo del periodo. Respeta el filtro de tipo.`,
+    filter_month:`Mes`, filter_year:`Año`, filter_location:`Ubicaciones`, filter_pesaje:`Pesaje`, chip_all_years:`Todos`, chip_all_months:`Todo el año`, ytd_btn:`◷ YTD`, ytd_title:`Year-To-Date: recorta cada año hasta el mes más reciente con datos, para comparar a igualdad de meses`, loading:`Cargando datos desde`,
+    panel_evol:`Evolución mensual · líneas y fórmulas`, panel_tipos:`Tipos de fórmula`, panel_labrobot:`Reparto Lab vs Robot`, panel_peso:`Peso de ingrediente procesado por mes (g)`,
+    panel_perf:`Fórmulas trabajadas por responsable`, panel_perftipo:`Tipos de fórmula por responsable`, note_perftipo:`Completas · Bases · Trials · Disoluciones (fórmulas distintas, apiladas)`,
+    panel_heat:`Mapa de calor · fórmulas por responsable y mes`, note_heat:`Intensidad = nº de fórmulas trabajadas en cada mes del T1. Independiente del filtro de mes.`,
+    panel_perfdetalle:`Detalle por responsable de fórmula`, panel_proy:`Proyectos · fórmulas evaluadas`, ph_proy:`Buscar por código, nombre, responsable o técnico…`,
+    panel_lab:`Carga de trabajo por técnico de laboratorio`, panel_ingr:`Top 12 ingredientes más utilizados`, panel_labtraza:`Trazabilidad · técnicos de laboratorio`,
+    panel_lotes:`Trazabilidad por lote de ingrediente`, ph_lotes:`Buscar por ingrediente, código o lote…`, note_lotes:`Top 80 lotes por número de líneas en el periodo seleccionado.`,
+    footer:`Powered by AI Strategy & Data Analysis department`,
+    kpi_trabajadas:`Fórmulas trabajadas`, sub_lineas_ingr:`líneas de ingrediente`, kpi_completas_full:`Fórmulas completas`, sub_deltotal:`del total`,
+    kpi_trials:`Trials`, sub_ensayo:`fórmulas en ensayo`, kpi_bases:`Bases`, sub_base:`fórmulas base`, kpi_disol:`Disoluciones`, sub_bxs:`códigos BXS`,
+    kpi_responsables:`Responsables activos`, sub_asignada:`con fórmula asignada`, kpi_completas:`Completas`, kpi_proyectos:`Proyectos`, sub_distintas:`fórmulas distintas`,
+    kpi_lineas_ingr:`Líneas de ingrediente`, kpi_ingr_distintos:`Ingredientes distintos`, kpi_peso:`Peso procesado (g)`, kpi_lineas_lab:`Líneas Lab`, kpi_lineas_robot:`Líneas Robot`,
+    ds_lineas:`Líneas`, ds_formulas:`Fórmulas`, ds_lab:`Lab`, ds_robot:`Robot`,
+    th_responsable:`Responsable`, th_pesado:`Pesado por`, tec_varios:`{n} técnicos pesaron esta fórmula`, th_formulas:`Fórmulas`, th_lineas:`Líneas`, th_completas:`Completas`, th_trials:`Trials`, th_bases:`Bases`, th_disol:`Disol.`,
+    th_codigo:`Código`, th_nombre_formula:`Nombre de fórmula`, th_tipo:`Tipo`, th_mes:`Mes`, th_peso:`Peso (g)`,
+    th_tecnico:`Técnico`, th_peso_proc:`Peso procesado (g)`, th_ingrediente:`Ingrediente`, th_lote:`Lote`,
+    chip_todos:`Todos`, heat_total:`Total`, sin_nombre:`(sin nombre)`, proy_count:`proyecto(s)`, proy_showing:`mostrando los primeros`,
+    chip_all:`Todo el T1`, periodo_all:`Todos los años`, actualizado:`Actualizado:`,
+    file:`archivo`, files:`archivos`, integr_sindup:`sin duplicados`, integr_title:`Control de integridad`, integr_ok:`Sin duplicados ni filas problemáticas.`, integr_avisos:`aviso(s) de integridad`,
+    regen_proy:`<div class="regen"><b>Pendiente de regenerar.</b> La lista de proyectos individuales se genera con la versión actual de <code>build_data.py</code>. Vuelve a ejecutar <code>python build_data.py</code> con los CSV en <code>location/&lt;centro&gt;/</code> para poblar esta tabla.</div>`,
+    regen_lotes:`<div class="regen"><b>Pendiente de regenerar.</b> La trazabilidad por lote se genera con la versión actual de <code>build_data.py</code>. Vuelve a ejecutar <code>python build_data.py</code> para poblar esta tabla.</div>`,
+    err_title:`No se pudieron cargar los datos`, err_chart:`No se pudo cargar la librería de gráficos (Chart.js). Revisa la conexión a internet o el bloqueo del CDN.`,
+    err_help:`El dashboard necesita el archivo <code>data/data.json</code> servido por HTTP. Si abres el HTML con doble clic (file://) el navegador bloquea el fetch: usa un servidor local (<code>python -m http.server</code>) o publícalo en Cloudflare/GitHub Pages.`,
+    panel_yoy:`Variación interanual`, trend_compare:`Comparar`, trend_vs:`frente a`, trend_metric:`Métrica`,
+    panel_seasonal:`Estacionalidad mensual · una línea por año`, note_seasonal:`Cada línea es un año; el eje X son los meses. Permite ver patrones estacionales y qué años van por encima.`,
+    forecast_toggle:`◇ Previsión`, forecast_label:`previsión`, forecast_note:`Previsión {y} para los meses restantes: media histórica de cada mes ajustada al nivel del año ({p} sobre la media en los meses ya conocidos). Estimación, no dato real.`,
+    panel_ingrfc:`Previsión de demanda de ingredientes · año vigente`, ph_ingrfc:`Buscar ingrediente o código…`,
+    ingrfc_note:`Estimación para {y} (top 25 ingredientes): consumo restante = media histórica mensual × nivel del año vigente. Más fiable cuantos más años de histórico (col. «hist.»). No es dato real.`,
+    th_ingrfc_real:`Real (ene–{m})`, th_ingrfc_prev:`Prev. restante`, th_ingrfc_total:`Total año est.`, th_ingrfc_factor:`Nivel`, th_ingrfc_hist:`Hist.`,
+    panel_comptipos:`Composición por tipo de fórmula y año`, note_comptipos:`% de fórmulas distintas por tipo en cada año.`,
+    panel_complabrobot:`Reparto Lab vs Robot por año`, note_complabrobot:`% de líneas Lab vs Robot en cada año.`,
+    panel_rankperf:`Ranking de responsables · variación entre años`, panel_rankingr:`Ranking de ingredientes · variación entre años`,
+    panel_ranklab:`Carga de trabajo por técnico de laboratorio · variación entre años`, note_ranklab:`Líneas procesadas por cada técnico en los dos años comparados.`, panel_ranklabtbl:`Ranking de técnicos · variación entre años`,
+    th_var:`Var.`, partial:`parcial`, yoy_vs:`vs`, yoy_nodata:`Selecciona dos años distintos para comparar.`,
+    yoy_pes_robot:`Pesadas robot`, yoy_pes_manual:`Pesadas manual`, th_estacion:`Estación`,
+    panel_rankest:`Ranking de estaciones · variación entre años`, note_rankest:`Pesadas (robot ROXY + manual MWS) por estación en los dos años comparados.`,
+    metric_lineas:`Líneas`, metric_formulas:`Fórmulas`, metric_peso:`Peso (g)`, metric_completas:`Completas`,
+    yoy_note_partial:`⚠ {y} es un año parcial ({n} meses con datos): las variaciones no son comparables a un año completo.`,
+    yoy_ytd_toggle:`◷ Hasta mes vigente`, yoy_ytd_note:`Ambos años recortados a los primeros {n} meses para una comparación justa. Líneas y peso exactos; los conteos de fórmulas pueden variar ~0,4% por solapamiento entre meses.`
+  },
+  en:{
+    title:`Production · Séneca`, h1:`Formula Production`, sub:`Séneca · Barcelona`,
+    period:`Period`, lines:`lines`, themeTitle:`Toggle theme`, export_title:`Export view to PDF`, export_err:`Could not generate the PDF.`,
+    tab_resumen:`Executive summary`, tab_perfumers:`Perfumers`, tab_proyectos:`Projects`, tab_ingredientes:`Ingredients & traceability`, tab_materias:`Raw materials`, tab_tendencias:`Trends`, tab_interanual:`Year-over-year`, tab_comparativa:`Center comparison`,
+    panel_cmp_ingr:`Center comparison · ingredient consumption by weight (g)`, panel_cmp_tabla:`Comparison detail`, ph_cmp:`Search ingredient or code…`, th_ratio:`Ratio`,
+    panel_cmp_pesaje:`Weighing workload by location`, cmp_pes_lineas:`lines`, cmp_pes_pesadas:`weighings`, cmp_pes_tecnicos:`technicians`, cmp_pes_estaciones:`stations`, cmp_pes_media:`avg`,
+    note_cmp_pesaje:`A "line" in Séneca equals one ingredient weighing, comparable to Granollers' weighings. Cumulative totals. Séneca: technicians (people). Granollers: 4 robots (ROXY) + manual stations (MWS).`,
+    panel_cmp_evol:`Compared evolution · weighings per month`, note_cmp_evol:`Monthly weighings per center on the same scale (Séneca: ingredient lines = weighings; Granollers: manual + robot weighings). Same unit → directly comparable.`,
+    cmp_ingr_section:`Ingredient consumption · cumulative (not affected by the year filter)`,
+    cmp_note:`{n} ingredients present in both centers. Only WEIGHT in grams is compared (the only equivalent magnitude between Dory and Roxane). Granollers: 2025 raw-material data. Ratio = {a} weight ÷ {b} weight.`,
+    cmp_note_n:`{n} ingredients present in ≥2 centers ({centros}). Only WEIGHT in grams is compared (the only equivalent magnitude across centers). Granollers: 2025 raw materials.`,
+    kpi_sampleorders:`Sample orders`, kpi_prodorders:`Production orders`, kpi_pours:`Pours`, kpi_samplesdia:`Samples per day`, kpi_dias:`Working days`,
+    sub_muestras:`sample requests`, sub_ordenes:`production orders`, sub_pours:`dosing operations`, sub_pordia:`avg samples/day`, sub_laborables:`in the period`,
+    m_sampleorders:`Samples`, m_prodorders:`Prod. orders`, m_pours:`Pours`, m_samplesdia:`Samples/day`,
+    panel_gra_evol:`Monthly trend`, panel_gra_prodsample:`Production vs samples per month`, note_gra_prodsample:`Production and sample orders per month (dual axis).`,
+    panel_mp_prod:`Raw materials · production`, panel_mp_samples:`Raw materials · sample requests`, ph_mp:`Search raw material or code…`,
+    note_mp:`Top 25 raw materials of 2025 by number of weighings. Source: Roxane (Stats MP sheet).`,
+    th_materia:`Raw material`, th_pesadas:`Weighings`,
+    ds_manual:`Manual`, kpi_pctrobot:`Automation`, sub_robot:`robot`, sub_manual:`manual`,
+    granularity:`Detail`, gran_mes:`Month`, gran_dia:`Day`,
+    gra_est_section:`Manual station detail (MWS)`,
+    panel_est_pesadas:`Weighings per manual station`, panel_est_peso:`Dosed weight per manual station (g)`,
+    panel_est_ordenes:`Sample orders per manual station`, note_est_ordenes:`Distinct sample orders handled by each technician. Monthly, or daily (daily requires picking a year or month in the filter).`,
+    panel_gra_mr:`Manual vs robot weighing`, note_gra_mr:`Number of weighings: manual stations (MWS) vs robot (ROXY). Source: Exportación MANUAL.`,
+    panel_gra_estaciones:`Workload per weighing station`, note_gra_estaciones:`Weighings per station in the selected period: robots (ROXY) + manual stations (MWS).`,
+    gra_pesaje_section:`Weighing & stations`, filter_tipo:`Weighing type`, filter_estacion:`Station`, est_all:`All`,
+    tipo_ambos:`Both`, tipo_prod:`Production`, tipo_muestra:`Sample`,
+    panel_est_evol:`{e} over time`, note_est_evol:`Weighings (bars) and dispensed weight (line) for the selected station over the period. Respects the type filter.`,
+    filter_month:`Month`, filter_year:`Year`, filter_location:`Locations`, filter_pesaje:`Weighing`, chip_all_years:`All`, chip_all_months:`Whole year`, ytd_btn:`◷ YTD`, ytd_title:`Year-To-Date: trims each year up to the most recent month with data, to compare like-for-like`, loading:`Loading data from`,
+    panel_evol:`Monthly trend · lines & formulas`, panel_tipos:`Formula types`, panel_labrobot:`Lab vs Robot split`, panel_peso:`Ingredient weight processed per month (g)`,
+    panel_perf:`Formulas worked by owner`, panel_perftipo:`Formula types by owner`, note_perftipo:`Complete · Bases · Trials · Dilutions (distinct formulas, stacked)`,
+    panel_heat:`Heatmap · formulas by owner and month`, note_heat:`Intensity = nº of formulas worked in each month of Q1. Independent of the month filter.`,
+    panel_perfdetalle:`Detail by formula owner`, panel_proy:`Projects · evaluated formulas`, ph_proy:`Search by code, name, owner or technician…`,
+    panel_lab:`Workload by lab technician`, panel_ingr:`Top 12 most-used ingredients`, panel_labtraza:`Traceability · lab technicians`,
+    panel_lotes:`Traceability by ingredient batch`, ph_lotes:`Search by ingredient, code or batch…`, note_lotes:`Top 80 batches by number of lines in the selected period.`,
+    footer:`Powered by AI Strategy & Data Analysis department`,
+    kpi_trabajadas:`Formulas worked`, sub_lineas_ingr:`ingredient lines`, kpi_completas_full:`Complete formulas`, sub_deltotal:`of total`,
+    kpi_trials:`Trials`, sub_ensayo:`formulas in trial`, kpi_bases:`Bases`, sub_base:`base formulas`, kpi_disol:`Dilutions`, sub_bxs:`BXS codes`,
+    kpi_responsables:`Active owners`, sub_asignada:`with assigned formula`, kpi_completas:`Complete`, kpi_proyectos:`Projects`, sub_distintas:`distinct formulas`,
+    kpi_lineas_ingr:`Ingredient lines`, kpi_ingr_distintos:`Distinct ingredients`, kpi_peso:`Processed weight (g)`, kpi_lineas_lab:`Lab lines`, kpi_lineas_robot:`Robot lines`,
+    ds_lineas:`Lines`, ds_formulas:`Formulas`, ds_lab:`Lab`, ds_robot:`Robot`,
+    th_responsable:`Owner`, th_pesado:`Weighed by`, tec_varios:`{n} technicians weighed this formula`, th_formulas:`Formulas`, th_lineas:`Lines`, th_completas:`Complete`, th_trials:`Trials`, th_bases:`Bases`, th_disol:`Dilut.`,
+    th_codigo:`Code`, th_nombre_formula:`Formula name`, th_tipo:`Type`, th_mes:`Month`, th_peso:`Weight (g)`,
+    th_tecnico:`Technician`, th_peso_proc:`Processed weight (g)`, th_ingrediente:`Ingredient`, th_lote:`Batch`,
+    chip_todos:`All`, heat_total:`Total`, sin_nombre:`(no name)`, proy_count:`project(s)`, proy_showing:`showing the first`,
+    chip_all:`All Q1`, periodo_all:`All years`, actualizado:`Updated:`,
+    file:`file`, files:`files`, integr_sindup:`no duplicates`, integr_title:`Integrity check`, integr_ok:`No duplicates or problematic rows.`, integr_avisos:`integrity warning(s)`,
+    regen_proy:`<div class="regen"><b>Pending regeneration.</b> The individual project list is generated by the current version of <code>build_data.py</code>. Re-run <code>python build_data.py</code> with the CSVs in <code>location/&lt;center&gt;/</code> to populate this table.</div>`,
+    regen_lotes:`<div class="regen"><b>Pending regeneration.</b> Batch traceability is generated by the current version of <code>build_data.py</code>. Re-run <code>python build_data.py</code> to populate this table.</div>`,
+    err_title:`Could not load data`, err_chart:`Could not load the charting library (Chart.js). Check your internet connection or CDN blocking.`,
+    err_help:`The dashboard needs <code>data/data.json</code> served over HTTP. If you open the HTML by double-clicking (file://) the browser blocks the fetch: use a local server (<code>python -m http.server</code>) or publish it on Cloudflare/GitHub Pages.`,
+    panel_yoy:`Year-over-year change`, trend_compare:`Compare`, trend_vs:`vs`, trend_metric:`Metric`,
+    panel_seasonal:`Monthly seasonality · one line per year`, note_seasonal:`Each line is a year; the X axis is the months. Reveals seasonal patterns and which years run higher.`,
+    forecast_toggle:`◇ Forecast`, forecast_label:`forecast`, forecast_note:`{y} forecast for the remaining months: each month's historical average scaled to the year's level ({p} vs the average in the months already known). Estimate, not actual data.`,
+    panel_ingrfc:`Ingredient demand forecast · current year`, ph_ingrfc:`Search ingredient or code…`,
+    ingrfc_note:`Estimate for {y} (top 25 ingredients): remaining consumption = monthly historical average × current-year level. More reliable with more years of history (“hist.” col). Not actual data.`,
+    th_ingrfc_real:`Actual (Jan–{m})`, th_ingrfc_prev:`Remaining fc.`, th_ingrfc_total:`Year total est.`, th_ingrfc_factor:`Level`, th_ingrfc_hist:`Hist.`,
+    panel_comptipos:`Composition by formula type and year`, note_comptipos:`% of distinct formulas by type in each year.`,
+    panel_complabrobot:`Lab vs Robot split by year`, note_complabrobot:`% of Lab vs Robot lines in each year.`,
+    panel_rankperf:`Owner ranking · change between years`, panel_rankingr:`Ingredient ranking · change between years`,
+    panel_ranklab:`Lab technician workload · change between years`, note_ranklab:`Lines processed by each technician in the two compared years.`, panel_ranklabtbl:`Technician ranking · change between years`,
+    th_var:`Chg.`, partial:`partial`, yoy_vs:`vs`, yoy_nodata:`Pick two different years to compare.`,
+    yoy_pes_robot:`Robot weighings`, yoy_pes_manual:`Manual weighings`, th_estacion:`Station`,
+    panel_rankest:`Station ranking · change between years`, note_rankest:`Weighings (robot ROXY + manual MWS) per station in the two compared years.`,
+    metric_lineas:`Lines`, metric_formulas:`Formulas`, metric_peso:`Weight (g)`, metric_completas:`Complete`,
+    yoy_note_partial:`⚠ {y} is a partial year ({n} months with data): changes are not comparable to a full year.`,
+    yoy_ytd_toggle:`◷ Up to current month`, yoy_ytd_note:`Both years trimmed to the first {n} months for a fair comparison. Lines and weight are exact; formula counts may vary ~0.4% due to month overlap.`
+  },
+  fr:{
+    title:`Production · Séneca`, h1:`Production de Formules`, sub:`Séneca · Barcelona`,
+    period:`Période`, lines:`lignes`, themeTitle:`Changer de thème`, export_title:`Exporter la vue en PDF`, export_err:`Impossible de générer le PDF.`,
+    tab_resumen:`Résumé exécutif`, tab_perfumers:`Parfumeurs`, tab_proyectos:`Projets`, tab_ingredientes:`Ingrédients et traçabilité`, tab_materias:`Matières premières`, tab_tendencias:`Tendances`, tab_interanual:`Interannuel`, tab_comparativa:`Comparaison des centres`,
+    panel_cmp_ingr:`Comparaison des centres · consommation d'ingrédients par poids (g)`, panel_cmp_tabla:`Détail comparatif`, ph_cmp:`Rechercher un ingrédient ou un code…`, th_ratio:`Ratio`,
+    panel_cmp_pesaje:`Charge de pesée par emplacement`, cmp_pes_lineas:`lignes`, cmp_pes_pesadas:`pesées`, cmp_pes_tecnicos:`techniciens`, cmp_pes_estaciones:`postes`, cmp_pes_media:`moy.`,
+    note_cmp_pesaje:`Une « ligne » chez Séneca équivaut à une pesée d'ingrédient, comparable aux pesées de Granollers. Totaux cumulés. Séneca : techniciens (personnes). Granollers : 4 robots (ROXY) + postes manuels (MWS).`,
+    panel_cmp_evol:`Évolution comparée · pesées par mois`, note_cmp_evol:`Pesées mensuelles par centre à la même échelle (Séneca : lignes d'ingrédient = pesées ; Granollers : pesées manuel + robot). Même unité → directement comparable.`,
+    cmp_ingr_section:`Consommation d'ingrédients · cumulé (indépendant du filtre d'année)`,
+    cmp_note:`{n} ingrédients présents dans les deux centres. Seul le POIDS en grammes est comparé (seule grandeur équivalente entre Dory et Roxane). Granollers : données matières premières 2025. Ratio = poids {a} ÷ poids {b}.`,
+    cmp_note_n:`{n} ingrédients présents dans ≥2 centres ({centros}). Seul le POIDS en grammes est comparé (seule grandeur équivalente entre centres). Granollers : matières premières 2025.`,
+    kpi_sampleorders:`Ordres d'échantillon`, kpi_prodorders:`Ordres de production`, kpi_pours:`Pours`, kpi_samplesdia:`Échantillons par jour`, kpi_dias:`Jours ouvrés`,
+    sub_muestras:`demandes d'échantillon`, sub_ordenes:`ordres de production`, sub_pours:`dosages`, sub_pordia:`moy. échantillons/jour`, sub_laborables:`sur la période`,
+    m_sampleorders:`Échantillons`, m_prodorders:`Ordres prod.`, m_pours:`Pours`, m_samplesdia:`Éch./jour`,
+    panel_gra_evol:`Évolution mensuelle`, panel_gra_prodsample:`Production vs échantillons par mois`, note_gra_prodsample:`Ordres de production et d'échantillon par mois (axe double).`,
+    panel_mp_prod:`Matières premières · production`, panel_mp_samples:`Matières premières · sample requests`, ph_mp:`Rechercher une matière première ou un code…`,
+    note_mp:`Top 25 des matières premières de 2025 par nombre de pesées. Source : Roxane (feuille Stats MP).`,
+    th_materia:`Matière première`, th_pesadas:`Pesées`,
+    ds_manual:`Manuel`, kpi_pctrobot:`Automatisation`, sub_robot:`robot`, sub_manual:`manuel`,
+    granularity:`Détail`, gran_mes:`Mois`, gran_dia:`Jour`,
+    gra_est_section:`Détail par poste manuel (MWS)`,
+    panel_est_pesadas:`Pesées par poste manuel`, panel_est_peso:`Poids dosé par poste manuel (g)`,
+    panel_est_ordenes:`Ordres d'échantillon par poste manuel`, note_est_ordenes:`Ordres d'échantillon distincts traités par chaque technicien. Mensuel, ou journalier (le journalier nécessite de choisir une année ou un mois dans le filtre).`,
+    panel_gra_mr:`Pesée manuelle vs robot`, note_gra_mr:`Nombre de pesées : postes manuels (MWS) vs robot (ROXY). Source : Exportación MANUAL.`,
+    panel_gra_estaciones:`Charge par poste de pesée`, note_gra_estaciones:`Pesées par poste sur la période sélectionnée : robots (ROXY) + postes manuels (MWS).`,
+    gra_pesaje_section:`Pesée et postes`, filter_tipo:`Type de pesée`, filter_estacion:`Poste`, est_all:`Tous`,
+    tipo_ambos:`Les deux`, tipo_prod:`Production`, tipo_muestra:`Échantillon`,
+    panel_est_evol:`Évolution de {e}`, note_est_evol:`Pesées (barres) et poids dosé (ligne) du poste sélectionné sur la période. Respecte le filtre de type.`,
+    filter_month:`Mois`, filter_year:`Année`, filter_location:`Emplacements`, filter_pesaje:`Pesée`, chip_all_years:`Tous`, chip_all_months:`Toute l'année`, ytd_btn:`◷ YTD`, ytd_title:`Year-To-Date : réduit chaque année jusqu'au mois le plus récent avec données, pour comparer à égalité`, loading:`Chargement des données depuis`,
+    panel_evol:`Évolution mensuelle · lignes et formules`, panel_tipos:`Types de formule`, panel_labrobot:`Répartition Labo vs Robot`, panel_peso:`Poids d'ingrédient traité par mois (g)`,
+    panel_perf:`Formules travaillées par responsable`, panel_perftipo:`Types de formule par responsable`, note_perftipo:`Complètes · Bases · Trials · Dilutions (formules distinctes, empilées)`,
+    panel_heat:`Carte de chaleur · formules par responsable et mois`, note_heat:`Intensité = nb de formules travaillées chaque mois du T1. Indépendant du filtre de mois.`,
+    panel_perfdetalle:`Détail par responsable de formule`, panel_proy:`Projets · formules évaluées`, ph_proy:`Rechercher par code, nom, responsable ou technicien…`,
+    panel_lab:`Charge de travail par technicien de laboratoire`, panel_ingr:`Top 12 des ingrédients les plus utilisés`, panel_labtraza:`Traçabilité · techniciens de laboratoire`,
+    panel_lotes:`Traçabilité par lot d'ingrédient`, ph_lotes:`Rechercher par ingrédient, code ou lot…`, note_lotes:`Top 80 des lots par nombre de lignes sur la période sélectionnée.`,
+    footer:`Powered by AI Strategy & Data Analysis department`,
+    kpi_trabajadas:`Formules travaillées`, sub_lineas_ingr:`lignes d'ingrédient`, kpi_completas_full:`Formules complètes`, sub_deltotal:`du total`,
+    kpi_trials:`Trials`, sub_ensayo:`formules en essai`, kpi_bases:`Bases`, sub_base:`formules de base`, kpi_disol:`Dilutions`, sub_bxs:`codes BXS`,
+    kpi_responsables:`Responsables actifs`, sub_asignada:`avec formule assignée`, kpi_completas:`Complètes`, kpi_proyectos:`Projets`, sub_distintas:`formules distinctes`,
+    kpi_lineas_ingr:`Lignes d'ingrédient`, kpi_ingr_distintos:`Ingrédients distincts`, kpi_peso:`Poids traité (g)`, kpi_lineas_lab:`Lignes Labo`, kpi_lineas_robot:`Lignes Robot`,
+    ds_lineas:`Lignes`, ds_formulas:`Formules`, ds_lab:`Labo`, ds_robot:`Robot`,
+    th_responsable:`Responsable`, th_pesado:`Pesé par`, tec_varios:`{n} techniciens ont pesé cette formule`, th_formulas:`Formules`, th_lineas:`Lignes`, th_completas:`Complètes`, th_trials:`Trials`, th_bases:`Bases`, th_disol:`Dilut.`,
+    th_codigo:`Code`, th_nombre_formula:`Nom de formule`, th_tipo:`Type`, th_mes:`Mois`, th_peso:`Poids (g)`,
+    th_tecnico:`Technicien`, th_peso_proc:`Poids traité (g)`, th_ingrediente:`Ingrédient`, th_lote:`Lot`,
+    chip_todos:`Tous`, heat_total:`Total`, sin_nombre:`(sans nom)`, proy_count:`projet(s)`, proy_showing:`affichage des premiers`,
+    chip_all:`Tout le T1`, periodo_all:`Toutes les années`, actualizado:`Mis à jour :`,
+    file:`fichier`, files:`fichiers`, integr_sindup:`sans doublons`, integr_title:`Contrôle d'intégrité`, integr_ok:`Aucun doublon ni ligne problématique.`, integr_avisos:`alerte(s) d'intégrité`,
+    regen_proy:`<div class="regen"><b>En attente de régénération.</b> La liste des projets individuels est générée par la version actuelle de <code>build_data.py</code>. Relancez <code>python build_data.py</code> avec les CSV dans <code>location/&lt;centre&gt;/</code> pour remplir ce tableau.</div>`,
+    regen_lotes:`<div class="regen"><b>En attente de régénération.</b> La traçabilité par lot est générée par la version actuelle de <code>build_data.py</code>. Relancez <code>python build_data.py</code> pour remplir ce tableau.</div>`,
+    err_title:`Impossible de charger les données`, err_chart:`Impossible de charger la bibliothèque de graphiques (Chart.js). Vérifiez la connexion Internet ou le blocage du CDN.`,
+    err_help:`Le tableau de bord a besoin de <code>data/data.json</code> servi via HTTP. Si vous ouvrez le HTML par double-clic (file://), le navigateur bloque le fetch : utilisez un serveur local (<code>python -m http.server</code>) ou publiez-le sur Cloudflare/GitHub Pages.`,
+    panel_yoy:`Variation interannuelle`, trend_compare:`Comparer`, trend_vs:`par rapport à`, trend_metric:`Métrique`,
+    panel_seasonal:`Saisonnalité mensuelle · une ligne par année`, note_seasonal:`Chaque ligne est une année ; l'axe X correspond aux mois. Révèle les tendances saisonnières et les années les plus hautes.`,
+    forecast_toggle:`◇ Prévision`, forecast_label:`prévision`, forecast_note:`Prévision {y} pour les mois restants : moyenne historique de chaque mois ajustée au niveau de l'année ({p} vs la moyenne sur les mois déjà connus). Estimation, pas une donnée réelle.`,
+    panel_ingrfc:`Prévision de demande d'ingrédients · année en cours`, ph_ingrfc:`Rechercher un ingrédient ou code…`,
+    ingrfc_note:`Estimation pour {y} (top 25 ingrédients) : consommation restante = moyenne historique mensuelle × niveau de l'année en cours. Plus fiable avec plus d'années d'historique (col. « hist. »). Pas une donnée réelle.`,
+    th_ingrfc_real:`Réel (jan–{m})`, th_ingrfc_prev:`Prév. restante`, th_ingrfc_total:`Total année est.`, th_ingrfc_factor:`Niveau`, th_ingrfc_hist:`Hist.`,
+    panel_comptipos:`Composition par type de formule et année`, note_comptipos:`% de formules distinctes par type chaque année.`,
+    panel_complabrobot:`Répartition Labo vs Robot par année`, note_complabrobot:`% de lignes Labo vs Robot chaque année.`,
+    panel_rankperf:`Classement des responsables · variation entre années`, panel_rankingr:`Classement des ingrédients · variation entre années`,
+    panel_ranklab:`Charge de travail par technicien de laboratoire · variation entre années`, note_ranklab:`Lignes traitées par chaque technicien sur les deux années comparées.`, panel_ranklabtbl:`Classement des techniciens · variation entre années`,
+    th_var:`Var.`, partial:`partiel`, yoy_vs:`vs`, yoy_nodata:`Choisissez deux années différentes à comparer.`,
+    yoy_pes_robot:`Pesées robot`, yoy_pes_manual:`Pesées manuel`, th_estacion:`Poste`,
+    panel_rankest:`Classement des postes · variation entre années`, note_rankest:`Pesées (robot ROXY + manuel MWS) par poste sur les deux années comparées.`,
+    metric_lineas:`Lignes`, metric_formulas:`Formules`, metric_peso:`Poids (g)`, metric_completas:`Complètes`,
+    yoy_note_partial:`⚠ {y} est une année partielle ({n} mois de données) : les variations ne sont pas comparables à une année complète.`,
+    yoy_ytd_toggle:`◷ Jusqu'au mois courant`, yoy_ytd_note:`Les deux années réduites aux {n} premiers mois pour une comparaison équitable. Lignes et poids exacts ; les comptages de formules peuvent varier ~0,4% à cause du chevauchement entre mois.`
+  }
+};
+function t(k){ return (I18N[LANG] && I18N[LANG][k]!=null) ? I18N[LANG][k] : (I18N.es[k]!=null ? I18N.es[k] : k); }
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>{ el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ el.placeholder = t(el.dataset.i18nPh); });
+  document.documentElement.lang = LANG;
+  document.title = t('title');
+  const tt=document.getElementById('themeToggle'); if(tt){ tt.title=t('themeTitle'); tt.setAttribute('aria-label',t('themeTitle')); }
+  const eb=document.getElementById('exportBtn'); if(eb){ eb.title=t('export_title'); eb.setAttribute('aria-label',t('export_title')); }
+}
+
+// Lee colores del tema actual desde las variables CSS (se recalcula al cambiar de tema)
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  const v = n => cs.getPropertyValue(n).trim();
+  return {
+    accent:v('--accent'), accent2:v('--accent2'), warn:v('--warn'), pink:v('--pink'),
+    ink2:v('--ink2'), grid:v('--grid'), lab:v('--lab'), robot:v('--robot'),
+    panel:v('--panel'),
+    barLineas:v('--bar-lineas'), barPeso:v('--bar-peso')
+  };
+}
+let C = readColors();
+const TIPO_KEYS = ['Fórmula completa','Disoluciones','Trial','Base','Base + Trial'];
+function tipoColor(t){
+  const map = {
+    'Fórmula completa':C.robot, 'Disoluciones':C.accent2,
+    'Trial':C.warn, 'Base':C.pink, 'Base + Trial':'#a78bfa'
+  };
+  return map[t] || C.ink2;
+}
+
+// === Multi-centro ===
+// Cada centro tiene su propio data.json y su "modelo" de datos:
+//  · formulas → Séneca (Dory) y Dubai (Dory): fórmulas/líneas/lab-robot/ingredientes
+//  · samples  → Granollers (Roxane): órdenes de producción/pours/sample requests
+const CENTROS = [
+  {id:'seneca',     label:'Séneca',     sub:'Barcelona', src:'data/data.json',                modelo:'formulas'},
+  {id:'granollers', label:'Granollers', sub:'Roxane',    src:'location/granollers/data.json', modelo:'samples'},
+  {id:'dubai',      label:'Dubai',      sub:'Dory',      src:'location/dubai/data.json',      modelo:'formulas'},
+];
+const DATASETS = {};            // id -> JSON cargado (solo los que cargan bien)
+let CENTER = 'seneca';
+let DATA = null, curMonths = [];
+// Filtro global multi-año y multi-mes: curYears = [] = "todos los años";
+// curMonths = [] = "todo el año"; si trae meses ('MM'), filtra esos meses en todos los años.
+// ytdGlobal recorta cada año a ene→mes más reciente con datos (Year-To-Date).
+let curYears = [], ytdGlobal = false;
+function modeloActual(){ return (CENTROS.find(c=>c.id===CENTER)||{}).modelo || 'formulas'; }
+function centroInfo(){ return CENTROS.find(c=>c.id===CENTER) || CENTROS[0]; }
+const charts = {};
+const destroy = k => { if(charts[k]){ charts[k].destroy(); delete charts[k]; } };
+
+function showError(msg){
+  document.getElementById('status').innerHTML =
+    `<div class="banner err"><h2>${t('err_title')}</h2>
+     <p style="color:var(--ink2);font-size:14px">${msg}</p>
+     <p style="color:var(--ink3);font-size:12px;margin-top:12px">${t('err_help')}</p></div>`;
+}
+
+function gridOpts(extra={}){
+  return {responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:C.grid,drawTicks:false},border:{display:false}},
+            y:{grid:{color:C.grid,drawTicks:false},border:{display:false},beginAtZero:true}},
+    ...extra};
+}
+const kpiCard = (label,val,sub,cls='',delta='') =>
+  `<div class="card ${cls}"><div class="kpi-l">${label}</div><div class="kpi-v">${val}</div><div class="kpi-s">${sub||''}</div>${delta}</div>`;
+
+// Delta interanual para las tarjetas KPI: compara con el MISMO periodo del año anterior.
+// Solo con UN año seleccionado (con varios años o "Todos" no hay base única → sin delta).
+function scopePrevio(){
+  if(curYears.length!==1) return null;
+  const prevY = String(parseInt(curYears[0],10)-1);
+  const prevYms = mesesSeleccionados().map(ym=>prevY+ym.slice(4))
+    .filter(ym=>(DATA.meses||[]).some(m=>m.ym===ym));
+  if(!prevYms.length) return null;
+  return prevYms.length===1 ? (DATA.scopes[prevYms[0]]||null) : aggScopes(prevYms);
+}
+let _prevScope=null, _prevLbl='';
+function setDeltaCtx(){ _prevScope=scopePrevio(); _prevLbl = curYears.length===1?String(parseInt(curYears[0],10)-1):''; }
+// HTML del delta de un KPI (vs mismo periodo del año anterior); '' si no aplica.
+function kpiDelta(key, curVal){
+  if(!_prevScope) return '';
+  const pv=(_prevScope.kpis||{})[key]; if(pv==null) return '';
+  const d=pctTxt(curVal, pv);
+  return `<div class="kpi-d ${d.cls}"><span class="cmp-arrow">${d.arrow}</span> ${d.txt} <span class="prev">${t('yoy_vs')} ${_prevLbl}</span></div>`;
+}
+// Banda "lo más relevante": una frase con las cifras clave del periodo + variación interanual.
+function renderInsightBand(k){
+  const el = document.getElementById('insightBand'); if(!el) return;
+  const fnum = (key,val,fmtFn)=>{
+    const txt = (fmtFn||fmt)(val);
+    if(!_prevScope) return `<b>${txt}</b>`;
+    const pv=(_prevScope.kpis||{})[key]; if(pv==null) return `<b>${txt}</b>`;
+    const d=pctTxt(val,pv);
+    return `<b>${txt}</b> <span class="${d.cls}">${d.arrow}${d.txt}</span>`;
+  };
+  const periodo = periodLabelText();
+  let html;
+  if(modeloActual()==='samples'){
+    html = `<span class="ico">◆</span><b>${periodo}</b> — ${fnum('sampleOrders',k.sampleOrders)} ${t('sub_muestras')}, `
+         + `${fnum('prodOrders',k.prodOrders)} ${t('sub_ordenes')}`
+         + (k.pctRobot!=null ? ` · ${t('kpi_pctrobot').toLowerCase()} <b>${k.pctRobot}%</b>` : '');
+  } else {
+    html = `<span class="ico">◆</span><b>${periodo}</b> — ${fnum('formulas',k.formulas)} ${t('kpi_trabajadas').toLowerCase()}, `
+         + `${fnum('lineas',k.lineas)} ${t('sub_lineas_ingr')}, ${fnum('completas',k.completas)} ${t('kpi_completas').toLowerCase()}`;
+  }
+  if(_prevLbl) html += ` · ${t('yoy_vs')} ${_prevLbl}`;
+  el.innerHTML = html;
+  el.style.display='';
+}
+
+function render(){
+  // Granollers (samples) tiene su propio pipeline de render
+  if(modeloActual()==='samples'){ renderSamples(); return; }
+
+  // Restaurar el bloque de Resumen del modelo formulas (por si venimos de samples)
+  document.getElementById('resumenFormulas').style.display = '';
+  document.getElementById('resumenSamples').style.display = 'none';
+
+  const S = scopeActual(), k = S.kpis;
+  setDeltaCtx();
+  document.getElementById('rowcount').textContent = fmt(k.lineas);
+  renderInsightBand(k);
+
+  // RESUMEN
+  document.getElementById('kpisResumen').innerHTML =
+    kpiCard(t('kpi_trabajadas'), fmt(k.formulas), `${fmt(k.lineas)} ${t('sub_lineas_ingr')}`,'',kpiDelta('formulas',k.formulas)) +
+    kpiCard(t('kpi_completas_full'), fmt(k.completas), `${k.formulas?Math.round(k.completas/k.formulas*100):0}% ${t('sub_deltotal')}`,'c2',kpiDelta('completas',k.completas)) +
+    kpiCard(t('kpi_trials'), fmt(k.trials), t('sub_ensayo'),'c3',kpiDelta('trials',k.trials)) +
+    kpiCard(t('kpi_bases'), fmt(k.bases), t('sub_base'),'c4',kpiDelta('bases',k.bases)) +
+    kpiCard(t('kpi_disol'), fmt(k.disoluciones), t('sub_bxs'),'c2',kpiDelta('disoluciones',k.disoluciones));
+
+  const sm = serieActual();
+  destroy('evol');
+  charts.evol = new Chart(document.getElementById('chEvol'),{
+    data:{labels:sm.map(m=>mesLabelEs(m.label)),datasets:[
+      {type:'bar',label:t('ds_lineas'),data:sm.map(m=>m.lineas),backgroundColor:C.barLineas,borderRadius:5,yAxisID:'y'},
+      {type:'line',label:t('ds_formulas'),data:sm.map(m=>m.formulas),borderColor:C.accent,backgroundColor:C.accent,tension:.35,borderWidth:3,pointRadius:4,yAxisID:'y1'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{grid:{color:C.grid}},y:{position:'left',grid:{color:C.grid},beginAtZero:true},
+        y1:{position:'right',grid:{display:false},beginAtZero:true}}}
+  });
+
+  const tipos = S.tiposDetalle;
+  destroy('tipos');
+  charts.tipos = new Chart(document.getElementById('chTipos'),{
+    type:'doughnut',
+    data:{labels:tipos.map(x=>tTipo(x.tipo)),datasets:[{data:tipos.map(x=>x.formulas),
+      backgroundColor:tipos.map(x=>tipoColor(x.tipo)),borderColor:C.panel,borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}
+  });
+  document.getElementById('legTipos').innerHTML = tipos.map(x=>
+    `<div class="leg-item"><span class="leg-dot" style="background:${tipoColor(x.tipo)}"></span>${tTipo(x.tipo)}<span class="n">${fmt(x.formulas)}</span></div>`).join('');
+
+  destroy('labrobot');
+  charts.labrobot = new Chart(document.getElementById('chLabRobot'),{
+    type:'bar',
+    data:{labels:sm.map(m=>mesLabelEs(m.label)),datasets:[
+      {label:t('ds_lab'),data:sm.map(m=>m.lab),backgroundColor:C.lab,borderRadius:5,stack:'s'},
+      {label:t('ds_robot'),data:sm.map(m=>m.robot),backgroundColor:C.robot,borderRadius:5,stack:'s'}
+    ]},
+    options:gridOpts({plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{stacked:true,grid:{color:C.grid}},y:{stacked:true,grid:{color:C.grid},beginAtZero:true}}})
+  });
+
+  destroy('peso');
+  charts.peso = new Chart(document.getElementById('chPeso'),{
+    type:'bar',
+    data:{labels:sm.map(m=>mesLabelEs(m.label)),datasets:[{data:sm.map(m=>m.peso),backgroundColor:C.barPeso,borderRadius:5}]},
+    options:gridOpts()
+  });
+
+  // PERFUMERS
+  document.getElementById('kpisPerf').innerHTML =
+    kpiCard(t('kpi_responsables'), fmt(S.perfumers.length), t('sub_asignada')) +
+    kpiCard(t('kpi_trabajadas'), fmt(k.formulas), '','c2') +
+    kpiCard(t('kpi_completas'), fmt(k.completas), '','c3') +
+    kpiCard(t('kpi_trials'), fmt(k.trials), '','c4') +
+    kpiCard(t('kpi_bases'), fmt(k.bases), '','c2');
+
+  const perf = S.perfumers.slice(0,12);
+  destroy('perf');
+  charts.perf = new Chart(document.getElementById('chPerf'),{
+    type:'bar',
+    data:{labels:perf.map(p=>p.nombre),datasets:[{data:perf.map(p=>p.formulas),backgroundColor:C.accent,borderRadius:4}]},
+    options:gridOpts({indexAxis:'y',scales:{x:{grid:{color:C.grid},beginAtZero:true},y:{grid:{display:false}}}})
+  });
+
+  // Barras apiladas por tipo de fórmula y responsable (Visual B de la guía)
+  destroy('perfTipo');
+  charts.perfTipo = new Chart(document.getElementById('chPerfTipo'),{
+    type:'bar',
+    data:{labels:perf.map(p=>p.nombre),datasets:[
+      {label:t('kpi_completas'),  data:perf.map(p=>p.completas),    backgroundColor:tipoColor('Fórmula completa'),borderRadius:3,stack:'t'},
+      {label:t('kpi_bases'),      data:perf.map(p=>p.bases),        backgroundColor:tipoColor('Base'),           borderRadius:3,stack:'t'},
+      {label:t('kpi_trials'),     data:perf.map(p=>p.trials),       backgroundColor:tipoColor('Trial'),          borderRadius:3,stack:'t'},
+      {label:t('kpi_disol'),data:perf.map(p=>p.disoluciones||0),backgroundColor:tipoColor('Disoluciones'),borderRadius:3,stack:'t'}
+    ]},
+    options:gridOpts({indexAxis:'y',plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{stacked:true,grid:{color:C.grid},beginAtZero:true},y:{stacked:true,grid:{display:false}}}})
+  });
+
+  renderHeatPerf();
+
+  const maxF = S.perfumers.length ? S.perfumers[0].formulas : 1;
+  document.getElementById('tblPerf').innerHTML =
+    `<thead><tr><th>${t('th_responsable')}</th><th class="num">${t('th_formulas')}</th><th class="num">${t('th_lineas')}</th><th class="num">${t('th_completas')}</th><th class="num">${t('th_trials')}</th><th class="num">${t('th_bases')}</th><th class="num">${t('th_disol')}</th></tr></thead><tbody>` +
+    S.perfumers.map(p=>{
+      const w = Math.round(p.formulas/maxF*100);
+      return `<tr><td>${p.nombre}</td><td class="num bar-cell"><span class="bar-bg" style="width:${w}%"></span><span>${fmt(p.formulas)}</span></td><td class="num">${fmt(p.lineas)}</td><td class="num">${fmt(p.completas)}</td><td class="num">${fmt(p.trials)}</td><td class="num">${fmt(p.bases)}</td><td class="num">${fmt(p.disoluciones==null?0:p.disoluciones)}</td></tr>`;
+    }).join('') + '</tbody>';
+
+  // PROYECTOS
+  renderProyectos();
+
+  // INGREDIENTES
+  document.getElementById('kpisIngr').innerHTML =
+    kpiCard(t('kpi_lineas_ingr'), fmt(k.lineas), '') +
+    kpiCard(t('kpi_ingr_distintos'), fmt(k.ingredientes), '','c2') +
+    kpiCard(t('kpi_peso'), fmt1(k.peso), '','c3') +
+    kpiCard(t('kpi_lineas_lab'), fmt(k.lab), `${k.lineas?Math.round(k.lab/k.lineas*100):0}%`,'c2') +
+    kpiCard(t('kpi_lineas_robot'), fmt(k.robot), `${k.lineas?Math.round(k.robot/k.lineas*100):0}%`,'c4');
+
+  const lab = S.lab;
+  destroy('lab');
+  charts.lab = new Chart(document.getElementById('chLab'),{
+    type:'bar',
+    data:{labels:lab.map(l=>l.nombre),datasets:[{label:t('ds_lineas'),data:lab.map(l=>l.lineas),backgroundColor:C.accent2,borderRadius:4}]},
+    options:gridOpts({indexAxis:'y',scales:{x:{grid:{color:C.grid},beginAtZero:true},y:{grid:{display:false}}}})
+  });
+
+  const ti = S.topIngredientes.slice(0,12);
+  destroy('ingr');
+  charts.ingr = new Chart(document.getElementById('chIngr'),{
+    type:'bar',
+    data:{labels:ti.map(i=>i.nombre.length>22?i.nombre.slice(0,22)+'…':i.nombre),
+      datasets:[{data:ti.map(i=>i.lineas),backgroundColor:C.robot,borderRadius:4}]},
+    options:gridOpts({indexAxis:'y',scales:{x:{grid:{color:C.grid},beginAtZero:true},y:{grid:{display:false}}}})
+  });
+
+  const maxL = lab.length ? lab[0].lineas : 1;
+  document.getElementById('tblLab').innerHTML =
+    `<thead><tr><th>${t('th_tecnico')}</th><th class="num">${t('th_lineas')}</th><th class="num">${t('th_formulas')}</th><th class="num">${t('th_peso_proc')}</th><th>${t('th_tipo')}</th></tr></thead><tbody>` +
+    lab.map(l=>{
+      const w = Math.round(l.lineas/maxL*100);
+      return `<tr><td>${l.nombre}</td><td class="num bar-cell"><span class="bar-bg" style="width:${w}%"></span><span>${fmt(l.lineas)}</span></td><td class="num">${fmt(l.formulas)}</td><td class="num">${fmt1(l.peso)}</td><td><span class="tag lab">${t('ds_lab')}</span></td></tr>`;
+    }).join('') + '</tbody>';
+
+  // TRAZABILIDAD POR LOTE
+  renderLotes();
+
+  // TENDENCIAS (comparativa entre años, independiente del filtro de periodo)
+  renderTendencias();
+  // COMPARATIVA cross-centro (independiente del centro activo)
+  renderComparativa();
+}
+
+// ===================== MODELO SAMPLES (Granollers) =====================
+// Métricas disponibles para el centro de samples (clave en serieMensual/kpis → clave i18n)
+const SAMPLE_METRICS = [['sampleOrders','m_sampleorders'],['prodOrders','m_prodorders'],
+                        ['pours','m_pours'],['samplesDia','m_samplesdia'],
+                        ['manual','ds_manual'],['robot','ds_robot']];
+let graMetric = 'sampleOrders';
+// Filtros del pesaje (bloque C): tipo Producción/Muestra/Ambos y subconjunto de estaciones
+let weighTipo = 'ambos';            // 'ambos' | 'prod' | 'muestra'
+let estSel = [];                    // estaciones marcadas; [] = todas
+const WEIGH_TIPOS = [['ambos','tipo_ambos'],['prod','tipo_prod'],['muestra','tipo_muestra']];
+// Valor según el tipo activo: muestra = sample; producción = total − sample; ambos = total.
+function valTipo(total, sample){
+  total=total||0; sample=sample||0;
+  return weighTipo==='muestra' ? sample : weighTipo==='prod' ? Math.max(0,total-sample) : total;
+}
+// ¿la estación entra en el filtro de estaciones? ([] = todas)
+function estEnFiltro(mod){ return !estSel.length || estSel.includes(mod); }
+
+function renderSamples(){
+  // Mostrar el bloque de samples y ocultar el de fórmulas en la página Resumen
+  document.getElementById('resumenFormulas').style.display = 'none';
+  document.getElementById('resumenSamples').style.display = '';
+  const S = scopeActual(), k = S.kpis;
+  setDeltaCtx();
+  document.getElementById('rowcount').textContent = fmt(k.sampleOrders);
+  renderInsightBand(k);
+
+  // KPIs (incluye % de automatización si hay datos de pesaje manual/robot)
+  let kpis =
+    kpiCard(t('kpi_sampleorders'), fmt(k.sampleOrders), t('sub_muestras'),'',kpiDelta('sampleOrders',k.sampleOrders)) +
+    kpiCard(t('kpi_prodorders'), fmt(k.prodOrders), t('sub_ordenes'),'c2',kpiDelta('prodOrders',k.prodOrders)) +
+    kpiCard(t('kpi_pours'), fmt(k.pours), t('sub_pours'),'c3',kpiDelta('pours',k.pours)) +
+    kpiCard(t('kpi_samplesdia'), fmt1(k.samplesDia), t('sub_pordia'),'c4',kpiDelta('samplesDia',k.samplesDia));
+  if(k.pctRobot!=null)
+    kpis += kpiCard(t('kpi_pctrobot'), k.pctRobot+'%', `${fmt(k.robot)} ${t('sub_robot')} · ${fmt(k.manual)} ${t('sub_manual')}`,'c2');
+  else
+    kpis += kpiCard(t('kpi_dias'), fmt(k.dias), t('sub_laborables'),'c2');
+  document.getElementById('kpisSamples').innerHTML = kpis;
+
+  renderGraEvol();
+  renderGraProdSample();
+  renderPesajeControls();
+  renderSamplesPesaje();
+
+  // Materias primas (pestaña aparte)
+  renderMaterias();
+  // Tendencias (comparativa anual, model-aware)
+  renderTendencias();
+  // Comparativa cross-centro
+  renderComparativa();
+}
+
+// Chips de Tipo de pesaje y de Estación; refrescan solo los gráficos de pesaje.
+function renderPesajeControls(){
+  const tc = document.getElementById('weighTipoChips');
+  tc.innerHTML = WEIGH_TIPOS.map(([key,lbl])=>`<button class="minichip${key===weighTipo?' active':''}" data-t="${key}">${t(lbl)}</button>`).join('');
+  tc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ weighTipo=c.dataset.t; renderPesajeControls(); renderSamplesPesaje(); });
+  const sc = document.getElementById('estSelChips');
+  const ests = DATA.estaciones||[];
+  sc.innerHTML = `<button class="minichip${estSel.length===0?' active':''}" data-e="ALL">${t('est_all')}</button>` +
+    ests.map(e=>`<button class="minichip${estSel.includes(e.modulo)?' active':''}" data-e="${e.modulo}">${(e.etiqueta||e.modulo).replace(/ \(.*\)/,'')}</button>`).join('');
+  sc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{
+    const e=c.dataset.e;
+    if(e==='ALL') estSel=[]; else { const i=estSel.indexOf(e); if(i>=0) estSel.splice(i,1); else estSel.push(e); }
+    renderPesajeControls(); renderSamplesPesaje();
+  });
+}
+// Re-render de solo los gráficos afectados por Tipo/Estación (sin recalcular KPIs ni órdenes/pours).
+function renderSamplesPesaje(){
+  renderGraMR();
+  renderGraEstaciones();
+  renderEstPesadas();
+  renderEstPeso();
+  renderEstOrdenes();
+  renderEstEvol();
+}
+
+// Serie mensual del periodo activo, según el filtro multi-año global (mesesSeleccionados).
+function serieSamples(){
+  if(periodoEsAll()) return DATA.serieMensual||[];
+  const yms = new Set(mesesSeleccionados());
+  return (DATA.serieMensual||[]).filter(m=>yms.has(m.ym));
+}
+// Drill-down: fija el filtro global a un mes concreto (al hacer clic en un gráfico).
+function drillToMonth(ym){
+  if(!ym) return;
+  curYears=[ym.slice(0,4)]; curMonths=[ym.slice(5,7)]; ytdGlobal=false;
+  buildChips(); applyPeriod(); render();
+}
+// Cursor "mano" cuando el ratón está sobre un elemento clicable del gráfico.
+function _ptr(e,els){ if(e.native&&e.native.target) e.native.target.style.cursor = els.length?'pointer':'default'; }
+// Suma un mapa {ym: valor} sobre el periodo activo (todos los meses si no hay filtro).
+function sumPeriodoYm(mapYm){
+  if(periodoEsAll()) return Object.values(mapYm||{}).reduce((a,b)=>a+(b||0),0);
+  return mesesSeleccionados().reduce((a,ym)=>a+((mapYm||{})[ym]||0),0);
+}
+// {mod:{ym:val}} → {mod: suma en el periodo}. Cae a los totales si no hay desglose mensual.
+function valoresPeriodo(mapMes, totales, mods){
+  if(!mapMes) return totales||{};
+  const out={}; (mods||[]).forEach(m=> out[m]=sumPeriodoYm(mapMes[m])); return out;
+}
+// Variante con tipo: suma total y muestra por estación en el periodo y aplica valTipo.
+function valoresPeriodoTipo(mapTot, mapSamp, totales, mods){
+  const out={};
+  (mods||[]).forEach(m=>{
+    const tot = mapTot ? sumPeriodoYm(mapTot[m]) : ((totales||{})[m]||0);
+    out[m] = valTipo(tot, mapSamp ? sumPeriodoYm(mapSamp[m]) : 0);
+  });
+  return out;
+}
+// Lista de ym del periodo activo (todos los meses con datos si no hay filtro).
+function ymsDelPeriodo(){
+  return (periodoEsAll() ? (DATA.meses||[]).map(m=>m.ym) : mesesSeleccionados()).slice().sort();
+}
+
+function renderGraEvol(){
+  // Chips de métrica
+  const mc = document.getElementById('graMetricChips');
+  mc.innerHTML = SAMPLE_METRICS.map(([key,lbl])=>`<button class="minichip${key===graMetric?' active':''}" data-m="${key}">${t(lbl)}</button>`).join('');
+  mc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ graMetric=c.dataset.m; renderGraEvol(); });
+  // Serie mensual filtrada por el periodo activo (ALL = todos los meses; año/mes = subconjunto)
+  const serie = serieSamples();
+  const labels = serie.map(m=>`${m.label.slice(0,3)} ${m.anio.slice(2)}`);
+  destroy('graEvol');
+  charts.graEvol = new Chart(document.getElementById('chGraEvol'),{
+    type:'line',
+    data:{labels, datasets:[{label:t(SAMPLE_METRICS.find(x=>x[0]===graMetric)[1]),
+      data:serie.map(m=>m[graMetric]), borderColor:C.accent2, backgroundColor:C.accent2,
+      tension:.3, borderWidth:2.5, pointRadius:1.5, fill:false}]},
+    options:gridOpts({plugins:{legend:{display:false}},
+      onClick:(e,els)=>{ if(els.length) drillToMonth((serie[els[0].index]||{}).ym); }, onHover:_ptr,
+      scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid},beginAtZero:true}}})
+  });
+}
+function renderGraProdSample(){
+  const serie = serieSamples();
+  const labels = serie.map(m=>`${m.label.slice(0,3)} ${m.anio.slice(2)}`);
+  destroy('graProdSample');
+  charts.graProdSample = new Chart(document.getElementById('chGraProdSample'),{
+    data:{labels,datasets:[
+      {type:'bar',label:t('kpi_prodorders'),data:serie.map(m=>m.prodOrders),backgroundColor:C.barLineas,borderRadius:4,yAxisID:'y'},
+      {type:'line',label:t('kpi_sampleorders'),data:serie.map(m=>m.sampleOrders),borderColor:C.accent,backgroundColor:C.accent,tension:.3,borderWidth:2.5,pointRadius:1.5,yAxisID:'y1'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom'}},
+      onClick:(e,els)=>{ if(els.length) drillToMonth((serie[els[0].index]||{}).ym); }, onHover:_ptr,
+      scales:{x:{grid:{color:C.grid}},y:{position:'left',grid:{color:C.grid},beginAtZero:true},
+        y1:{position:'right',grid:{display:false},beginAtZero:true}}}
+  });
+}
+
+// Pesaje manual (MWS) vs robot (ROXY): barras apiladas. Toggle Mes/Día.
+let mrGran = 'mes';   // 'mes' | 'dia'
+function renderGraMR(){
+  // Chips de granularidad (Día solo si hay serie diaria)
+  const hayDia = (DATA.serieDiaria||[]).length>0;
+  const grans = hayDia ? [['mes','gran_mes'],['dia','gran_dia']] : [['mes','gran_mes']];
+  if(!hayDia) mrGran='mes';
+  const gc = document.getElementById('mrGranChips');
+  gc.innerHTML = grans.map(([k,lbl])=>`<button class="minichip${k===mrGran?' active':''}" data-g="${k}">${t(lbl)}</button>`).join('');
+  gc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ mrGran=c.dataset.g; renderGraMR(); });
+
+  let serie, labels;
+  if(mrGran==='dia'){
+    // Diario, filtrado por el periodo activo (año/mes) para no saturar el eje
+    const yms = new Set(mesesSeleccionados());
+    serie = (DATA.serieDiaria||[]).filter(d=> periodoEsAll() || yms.has(d.ymd.slice(0,7)));
+    labels = serie.map(d=> curMonths.length===1 ? d.ymd.slice(8) : d.ymd.slice(5));   // dd (un mes) o mm-dd
+  }else{
+    serie = serieSamples().filter(m=>'manual' in m);
+    labels = serie.map(m=>`${m.label.slice(0,3)} ${m.anio.slice(2)}`);
+  }
+  if(!serie.length){ destroy('graMR'); return; }
+  const tipoBar = mrGran==='dia' && serie.length>62;   // muchos días: sin borderRadius
+  destroy('graMR');
+  charts.graMR = new Chart(document.getElementById('chGraMR'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:t('ds_robot'),data:serie.map(m=>valTipo(m.robot,m.robotSample)),backgroundColor:C.robot,borderRadius:tipoBar?0:3,stack:'p'},
+      {label:t('ds_manual'),data:serie.map(m=>valTipo(m.manual,m.manualSample)),backgroundColor:C.lab,borderRadius:tipoBar?0:3,stack:'p'}
+    ]},
+    options:gridOpts({plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{stacked:true,grid:{color:C.grid},ticks:{maxTicksLimit:mrGran==='dia'?20:24}},
+              y:{stacked:true,grid:{color:C.grid},beginAtZero:true}}})
+  });
+}
+
+// Carga por estación de pesaje (ranking de puestos MWS/ROXY). Respeta el filtro de periodo.
+function renderGraEstaciones(){
+  const base = DATA.estaciones||[];
+  if(!base.length){ destroy('graEst'); return; }
+  const estMes = DATA.estacionesMes;   // {modulo:{ym:pesadas}} (si falta, se usan totales)
+  const estMesS = DATA.estacionesMesSample||{};
+  const est = base
+    .filter(e=>estEnFiltro(e.modulo))
+    .map(e=>({...e, pesadas: estMes ? valTipo(sumPeriodoYm(estMes[e.modulo]), sumPeriodoYm(estMesS[e.modulo])) : e.pesadas}))
+    .filter(e=>e.pesadas>0)
+    .sort((a,b)=>b.pesadas-a.pesadas);
+  if(!est.length){ destroy('graEst'); return; }
+  destroy('graEst');
+  charts.graEst = new Chart(document.getElementById('chGraEstaciones'),{
+    type:'bar',
+    data:{labels:est.map(e=>e.etiqueta||e.modulo),datasets:[{data:est.map(e=>e.pesadas),
+      backgroundColor:est.map(e=>e.tipo==='robot'?C.robot:C.lab),borderRadius:4}]},
+    options:gridOpts({indexAxis:'y',plugins:{legend:{display:false}},
+      onClick:(e,els)=>{ if(els.length){ const mod=(est[els[0].index]||{}).modulo;
+        if(mod){ estSel=[mod]; renderPesajeControls(); renderSamplesPesaje();
+          document.getElementById('estEvolPanel').scrollIntoView({block:'nearest'}); } } }, onHover:_ptr,
+      scales:{x:{grid:{color:C.grid},beginAtZero:true},y:{grid:{display:false}}}})
+  });
+}
+
+// ---- Detalle por estación MANUAL (MWS = técnicos) ----
+// Helper: etiquetas y orden estables de las estaciones manuales
+function estManualLabels(){
+  const em = DATA.estManual; if(!em) return null;
+  const mods = em.modulos.filter(estEnFiltro);   // respeta el filtro de estación
+  return {mods, labels: mods.map(m=>em.etiquetas[m])};
+}
+// Barras de un valor por estación (pesadas o peso total)
+function barEstacion(canvasId, chartKey, valores){
+  const L = estManualLabels(); if(!L){ destroy(chartKey); return; }
+  destroy(chartKey);
+  charts[chartKey] = new Chart(document.getElementById(canvasId),{
+    type:'bar',
+    data:{labels:L.labels,datasets:[{data:L.mods.map(m=>valores[m]||0),backgroundColor:C.lab,borderRadius:4}]},
+    options:gridOpts({indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:C.grid},beginAtZero:true},y:{grid:{display:false}}}})
+  });
+}
+// Pesadas y peso por estación manual: periodo activo + tipo (Producción/Muestra/Ambos).
+function renderEstPesadas(){ const em=DATA.estManual; if(em) barEstacion('chEstPesadas','estPesadas', valoresPeriodoTipo(em.pesadasMes, em.pesadasMesSample, em.pesadas, em.modulos)); }
+function renderEstPeso(){    const em=DATA.estManual; if(em) barEstacion('chEstPeso','estPeso', valoresPeriodoTipo(em.pesoMes, em.pesoMesSample, em.peso, em.modulos)); }
+
+// Órdenes de muestra por estación manual: líneas (una por técnico) en el tiempo. Toggle Mes/Día.
+let estOrdGran = 'mes';   // 'mes' | 'dia'
+function renderEstOrdenes(){
+  const em = DATA.estManual; if(!em){ destroy('estOrd'); return; }
+  // Chips de granularidad
+  const gc = document.getElementById('estOrdGranChips');
+  gc.innerHTML = [['mes','gran_mes'],['dia','gran_dia']]
+    .map(([k,lbl])=>`<button class="minichip${k===estOrdGran?' active':''}" data-g="${k}">${t(lbl)}</button>`).join('');
+  gc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ estOrdGran=c.dataset.g; renderEstOrdenes(); });
+
+  const esDia = estOrdGran==='dia';
+  const fuente = esDia ? em.ordenesDia : em.ordenesMes;  // {modulo: {ymd|ym: n}}
+  const mods = em.modulos.filter(estEnFiltro);           // respeta el filtro de estación
+  // ¿una clave de periodo (ym o ymd) cae en el filtro global activo? (mesesSeleccionados)
+  const ymsSel = new Set(mesesSeleccionados());
+  const enFiltro = key => periodoEsAll() ? true : ymsSel.has(key.slice(0,7));
+  // Unión de periodos presentes en cualquier estación, dentro del filtro.
+  // En modo Día sin año ni mes serían cientos de días → exigimos elegir año/mes.
+  const sinAcotar = !curYears.length && !curMonths.length;
+  let periodos = [];
+  if(!(esDia && sinAcotar)){
+    const set = new Set();
+    mods.forEach(m=>Object.keys(fuente[m]||{}).forEach(k=>{ if(enFiltro(k)) set.add(k); }));
+    periodos = [...set].sort();
+  }
+  const palette=[C.accent, C.accent2, '#6aa84f', C.pink, '#8e7cc3', '#d9a23c'];
+  const labels = periodos.map(p=> esDia ? (curMonths.length===1 ? p.slice(8) : p.slice(5)) : mesLabelCorto(p));
+  destroy('estOrd');
+  charts.estOrd = new Chart(document.getElementById('chEstOrdenes'),{
+    type:'line',
+    data:{labels, datasets: mods.map((m,i)=>({
+      label: em.etiquetas[m].replace(/ \(.*\)/,''),       // solo el nombre del técnico
+      data: periodos.map(p=> (fuente[m]||{})[p] ?? null),
+      borderColor:palette[i%palette.length], backgroundColor:palette[i%palette.length],
+      tension:.3, borderWidth:2, pointRadius:1.5, spanGaps:true
+    }))},
+    options:gridOpts({plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{grid:{color:C.grid},ticks:{maxTicksLimit:esDia?20:24}},y:{grid:{color:C.grid},beginAtZero:true}}})
+  });
+}
+// 'YYYY-MM' → 'Mmm AA'
+function mesLabelCorto(ym){
+  const n=parseInt(ym.slice(5,7),10)-1;
+  return `${(MESES_I18N[LANG]||MESES_I18N.es)[n].slice(0,3)} ${ym.slice(2,4)}`;
+}
+
+// Evolución mensual de UNA estación (solo cuando hay exactamente una seleccionada):
+// pesadas (barras) y, si es manual, peso dosificado (línea). Respeta periodo + tipo.
+function renderEstEvol(){
+  const panel = document.getElementById('estEvolPanel');
+  if(estSel.length!==1){ panel.style.display='none'; destroy('estEvol'); return; }
+  const mod = estSel[0];
+  const em = DATA.estManual||{};
+  const lbl = (em.etiquetas&&em.etiquetas[mod]) || mod;
+  panel.style.display='';
+  document.getElementById('estEvolTitle').textContent = t('panel_est_evol').replace('{e}', lbl);
+  const yms = ymsDelPeriodo();
+  const pesT=(DATA.estacionesMes||{})[mod]||{}, pesS=(DATA.estacionesMesSample||{})[mod]||{};
+  const esManual = (em.modulos||[]).includes(mod);
+  const pesoT = esManual ? (em.pesoMes||{})[mod]||{} : null;
+  const pesoS = esManual ? (em.pesoMesSample||{})[mod]||{} : null;
+  const datasets = [{type:'bar', label:t('th_pesadas'), data:yms.map(ym=>valTipo(pesT[ym],pesS[ym])),
+    backgroundColor:C.barLineas, borderRadius:4, yAxisID:'y'}];
+  if(esManual) datasets.push({type:'line', label:t('th_peso'), data:yms.map(ym=>valTipo(pesoT[ym],pesoS[ym])),
+    borderColor:C.accent, backgroundColor:C.accent, tension:.3, borderWidth:2.5, pointRadius:1.5, yAxisID:'y1'});
+  destroy('estEvol');
+  charts.estEvol = new Chart(document.getElementById('chEstEvol'),{
+    data:{labels:yms.map(mesLabelCorto), datasets},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:esManual,position:'bottom'}},
+      scales:{x:{grid:{color:C.grid}},y:{position:'left',grid:{color:C.grid},beginAtZero:true},
+        y1:{position:'right',display:esManual,grid:{display:false},beginAtZero:true}}}
+  });
+}
+
+// Materias primas: dos tablas top-25 con buscador
+function renderMaterias(){
+  const mp = DATA.materiasPrimas || {produccion:[], sampleRequests:[]};
+  drawMpTable('tblMpProd', mp.produccion, 'mpProdSearch');
+  drawMpTable('tblMpSamp', mp.sampleRequests, 'mpSampSearch');
+  document.getElementById('mpProdSearch').oninput = ()=>drawMpTable('tblMpProd', mp.produccion, 'mpProdSearch');
+  document.getElementById('mpSampSearch').oninput = ()=>drawMpTable('tblMpSamp', mp.sampleRequests, 'mpSampSearch');
+}
+function drawMpTable(tblId, list, searchId){
+  const q = (document.getElementById(searchId)?.value || '').toLowerCase().trim();
+  let rows = (list||[]).filter(x=> !q || (x.nombre||'').toLowerCase().includes(q) || (x.codigo||'').toLowerCase().includes(q));
+  const maxP = rows.length ? Math.max(...rows.map(x=>x.pesadas)) : 1;
+  document.getElementById(tblId).innerHTML =
+    `<thead><tr><th>${t('th_materia')}</th><th class="num">${t('th_codigo')}</th><th class="num">${t('th_pesadas')}</th><th class="num">${t('th_peso')}</th></tr></thead><tbody>`+
+    rows.map(x=>{
+      const w = Math.round(x.pesadas/maxP*100);
+      const nm = x.nombre.length>30 ? x.nombre.slice(0,30)+'…' : x.nombre;
+      return `<tr><td title="${x.nombre}">${nm}</td><td class="num mono">${x.codigo}</td>`+
+        `<td class="num bar-cell"><span class="bar-bg" style="width:${w}%"></span><span>${fmt(x.pesadas)}</span></td>`+
+        `<td class="num">${fmt1(x.peso)}</td></tr>`;
+    }).join('') + '</tbody>';
+}
+
+// ===================== TENDENCIAS =====================
+let yoyA = null, yoyB = null, seasonMetric = 'lineas', yoyYTD = false;
+const METRIC_KEYS = [['lineas','metric_lineas'],['formulas','metric_formulas'],['peso','metric_peso'],['completas','metric_completas']];
+
+// nº de meses con datos de un año (para marcar años parciales)
+function mesesDe(anio){ return (DATA.meses||[]).filter(m=>m.anio===anio).length; }
+function esParcial(anio){ return mesesDe(anio) < 12; }
+// nº de meses del año vigente (el último); base del recorte "hasta mes vigente"
+function mesesVigente(){ const an=DATA.anios||[]; return an.length ? mesesDe(an[an.length-1]) : 12; }
+
+// Devuelve el scope de un año, recortado a los primeros N meses si el modo YTD está activo.
+// Suma los scopes mensuales ene→N: kpis y listas (lab/perfumers/topIngredientes).
+// Sumables (líneas/peso/lab/robot) → exactos; conteos distintos (fórmulas…) → +~0,4% por
+// solapamiento entre meses (aceptado: ver nota del panel). Cachea por (anio,N) para no recalcular.
+const _scopeYoYCache = {};
+function scopeYoY(anio){
+  if(!yoyYTD) return DATA.scopes[anio];
+  const N = mesesVigente();
+  if(N>=12) return DATA.scopes[anio];                 // año vigente completo: sin recorte
+  const ckey = CENTER+'|'+anio+'|'+N;   // por centro (los años coinciden entre centros)
+  if(_scopeYoYCache[ckey]) return _scopeYoYCache[ckey];
+  const yms = (DATA.meses||[]).filter(m=>m.anio===anio && parseInt(m.ym.slice(5,7),10)<=N).map(m=>m.ym);
+  if(!yms.length) return DATA.scopes[anio];
+  // Claves de KPI a sumar: las del propio scope del año (soporta formulas y samples).
+  // samplesDia no es sumable → se recalcula al final como sampleOrders/dias.
+  const baseKpis = (DATA.scopes[anio]||{}).kpis || {};
+  const KPI_KEYS = Object.keys(baseKpis).filter(k=>k!=='samplesDia');
+  const kpis = {}; KPI_KEYS.forEach(k=>kpis[k]=0);
+  const acc = {lab:{}, perfumers:{}, topIngredientes:{}};
+  const sumList = (dst, list, keyField, fields)=>{
+    (list||[]).forEach(x=>{
+      const id = x[keyField];
+      const o = dst[id] || (dst[id] = Object.assign({}, x, Object.fromEntries(fields.map(f=>[f,0]))));
+      fields.forEach(f=> o[f] = (o[f]||0) + (x[f]||0));
+    });
+  };
+  yms.forEach(ym=>{
+    const s = DATA.scopes[ym]; if(!s) return;
+    KPI_KEYS.forEach(k=> kpis[k] += (s.kpis[k]||0));
+    sumList(acc.lab, s.lab, 'nombre', ['lineas','peso','formulas']);
+    sumList(acc.perfumers, s.perfumers, 'nombre', ['formulas','lineas','completas','trials','bases','disoluciones']);
+    sumList(acc.topIngredientes, s.topIngredientes, 'codigo', ['lineas','peso']);
+  });
+  // Métricas derivadas no sumables
+  if('samplesDia' in baseKpis) kpis.samplesDia = kpis.dias ? +(kpis.sampleOrders/kpis.dias).toFixed(2) : 0;
+  const toSorted = (obj, sortF)=> Object.values(obj).sort(sortF);
+  const out = {
+    kpis,
+    lab: toSorted(acc.lab, (a,b)=>b.lineas-a.lineas),
+    perfumers: toSorted(acc.perfumers, (a,b)=>b.formulas-a.formulas),
+    topIngredientes: toSorted(acc.topIngredientes, (a,b)=>b.lineas-a.lineas),
+    tiposDetalle: DATA.scopes[anio].tiposDetalle   // no se usa en YoY/rankings; se deja el del año
+  };
+  _scopeYoYCache[ckey] = out;
+  return out;
+}
+// Etiqueta de un año en el contexto YoY: añade " ·Nm" si está recortado
+function yoyLabel(anio){
+  if(!yoyYTD) return anio;
+  const N = mesesVigente();
+  return N<12 ? `${anio} ·${N}m` : anio;
+}
+
+function pctTxt(cur, prev){
+  if(prev==null || prev===0) return {cls:'flat', arrow:'·', txt:'—'};
+  const p = (cur-prev)/prev*100;
+  const cls = p>0.05?'up':(p<-0.05?'down':'flat');
+  const arrow = p>0.05?'▲':(p<-0.05?'▼':'■');
+  const sign = p>0?'+':'';
+  return {cls, arrow, txt:`${sign}${p.toLocaleString(LOCALES[LANG],{maximumFractionDigits:1})}%`};
+}
+
+function renderTendencias(){
+  const anios = DATA.anios || [];
+  if(anios.length < 1){ return; }
+  // Defaults. Con YTD activo (modo por defecto): B = último año aunque sea parcial,
+  // A = el anterior; la comparación es justa porque ambos se recortan a los mismos meses.
+  // Sin YTD: B = último año COMPLETO (evita un −% engañoso por arrancar en un parcial).
+  if(yoyA===null){
+    if(yoyYTD){
+      yoyB = anios[anios.length-1];
+      yoyA = anios.length>1 ? anios[anios.length-2] : anios[0];
+    } else {
+      let bi = anios.length-1;
+      while(bi>0 && esParcial(anios[bi])) bi--;
+      yoyB = anios[bi];
+      yoyA = bi>0 ? anios[bi-1] : anios[0];
+    }
+  }
+  // Chips de selección de años A y B
+  const chipHtml = (sel) => anios.map(a=>`<button class="minichip${a===sel?' active':''}" data-y="${a}">${a}${esParcial(a)?' ·'+mesesDe(a)+'m':''}</button>`).join('');
+  // "Comparar" (yoyYearChips) = año reciente (B, lo que lideran las tarjetas);
+  // "frente a" (yoyPrevChips) = año base (A). El orden de las etiquetas en el HTML manda.
+  const cB = document.getElementById('yoyYearChips'), cA = document.getElementById('yoyPrevChips');
+  cB.innerHTML = chipHtml(yoyB);
+  cA.innerHTML = chipHtml(yoyA);
+  cB.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ yoyB=c.dataset.y; renderTendencias(); });
+  cA.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ yoyA=c.dataset.y; renderTendencias(); });
+  // Toggle "hasta mes vigente": solo tiene sentido si el año vigente es parcial
+  const ytdBtn = document.getElementById('yoyYtdToggle');
+  ytdBtn.style.display = mesesVigente()<12 ? '' : 'none';
+  ytdBtn.classList.toggle('active', yoyYTD);
+  ytdBtn.onclick = ()=>{ yoyYTD=!yoyYTD; renderTendencias(); };
+
+  // Paneles que solo aplican al modelo "formulas" (composición, técnicos, rankings,
+  // previsión de ingredientes): se ocultan en samples. Y al revés para los de samples.
+  const soloFormulas = modeloActual()==='formulas';
+  document.querySelectorAll('.tend-only-formulas').forEach(el=>el.style.display = soloFormulas?'':'none');
+  document.querySelectorAll('.inter-only-samples').forEach(el=>el.style.display = soloFormulas?'none':'');
+
+  renderYoYCards();
+  renderSeasonal();
+  if(soloFormulas){
+    renderComposicion();
+    renderCompLab();
+    renderIngrForecast();
+    renderRanking('tblRankPerf', 'perfumers', 'nombre', 'formulas');
+    renderRanking('tblRankLab', 'lab', 'nombre', 'lineas');
+    renderRanking('tblRankIngr', 'topIngredientes', 'nombre', 'lineas');
+  } else {
+    renderRankEstaciones('tblRankEst');
+  }
+}
+// Pesadas por estación en un año, respetando el recorte YTD activo (igual que scopeYoY).
+function pesadasEstacionAnio(anio){
+  const estMes = DATA.estacionesMes||{};
+  const N = (yoyYTD && mesesVigente()<12) ? mesesVigente() : 12;
+  const yms = (DATA.meses||[]).filter(m=>m.anio===anio && parseInt(m.ym.slice(5,7),10)<=N).map(m=>m.ym);
+  const out={};
+  Object.keys(estMes).forEach(mod=>{
+    const s = yms.reduce((a,ym)=>a+((estMes[mod]||{})[ym]||0),0);
+    if(s>0) out[mod]=s;
+  });
+  return out;
+}
+// Ranking de estaciones (pesadas) con variación entre los dos años comparados.
+function renderRankEstaciones(tblId){
+  const el = document.getElementById(tblId); if(!el) return;
+  const A = pesadasEstacionAnio(yoyA), B = pesadasEstacionAnio(yoyB);
+  const em = DATA.estManual||{};
+  const lbl = mod => (em.etiquetas&&em.etiquetas[mod]) || mod;
+  const mods = [...new Set([...Object.keys(B), ...Object.keys(A)])];
+  if(!mods.length){ el.innerHTML=''; return; }
+  const rows = mods.map(m=>({m, b:B[m]||0, a:A[m]||0})).sort((x,y)=>y.b - x.b);
+  el.innerHTML =
+    `<thead><tr><th>${t('th_estacion')}</th><th class="num">${yoyLabel(yoyA)}</th><th class="num">${yoyLabel(yoyB)}</th><th class="num">${t('th_var')}</th></tr></thead><tbody>`+
+    rows.map(r=>{
+      const d = pctTxt(r.b, r.a);
+      return `<tr><td>${lbl(r.m)}</td><td class="num">${fmt(r.a)}</td><td class="num">${fmt(r.b)}</td>`+
+        `<td class="num" style="color:var(--${d.cls==='up'?'accent':(d.cls==='down'?'pink':'ink3')})">${d.arrow} ${d.txt}</td></tr>`;
+    }).join('') + '</tbody>';
+}
+// Métricas activas en Tendencias según el modelo del centro
+function metricKeys(){ return modeloActual()==='samples' ? SAMPLE_METRICS : METRIC_KEYS; }
+// KPIs que se muestran en las tarjetas YoY según modelo: [claveKPI, claveI18n, esFloat]
+function yoyDefs(){
+  return modeloActual()==='samples'
+    ? [['sampleOrders','kpi_sampleorders',false],['prodOrders','kpi_prodorders',false],
+       ['pours','kpi_pours',false],['samplesDia','kpi_samplesdia',true],
+       ['robot','yoy_pes_robot',false],['manual','yoy_pes_manual',false]]
+    : [['formulas','kpi_trabajadas',false],['completas','kpi_completas',false],
+       ['trials','kpi_trials',false],['lineas','kpi_lineas_ingr',false],['peso','kpi_peso',true]];
+}
+
+// === Previsión de demanda por ingrediente (top 25 del año vigente) ===
+let ingrFcMetric = 'peso';   // peso (g) es lo más útil para compras; alternativa 'lineas'
+// Reconstruye la serie mensual de cada ingrediente a partir de los scopes mensuales:
+// {cod: {nombre, anios:{a:[12]}}}. Solo cubre ingredientes presentes en algún top mensual.
+function serieIngredientes(metric){
+  const out = {};
+  (DATA.meses||[]).forEach(m=>{
+    const a = m.anio, mi = parseInt(m.ym.slice(5,7),10)-1;
+    (DATA.scopes[m.ym].topIngredientes||[]).forEach(x=>{
+      const o = out[x.codigo] || (out[x.codigo] = {nombre:x.nombre, anios:{}});
+      (o.anios[a] = o.anios[a] || new Array(12).fill(null))[mi] = x[metric];
+      o.nombre = x.nombre;
+    });
+  });
+  return out;
+}
+// Previsión para un ingrediente: {real, prev, total, factor, histN, idx} o null
+function preverIngrediente(serie, anios){
+  const vig = anios[anios.length-1];
+  if(!esParcial(vig)) return null;
+  const completos = anios.filter(a=>!esParcial(a) && serie.anios[a] &&
+                                    serie.anios[a].filter(v=>v!=null).length===12);
+  const vigVals = serie.anios[vig] || [];
+  const media = new Array(12).fill(null).map((_,i)=>{
+    const vs = completos.map(a=>serie.anios[a][i]).filter(v=>v!=null);
+    return vs.length ? vs.reduce((s,v)=>s+v,0)/vs.length : null;
+  });
+  let sumVig=0, sumMedia=0, idx=0, real=0;
+  for(let i=0;i<12;i++){
+    if(vigVals[i]!=null){ real+=vigVals[i]; idx=i+1; if(media[i]!=null){ sumVig+=vigVals[i]; sumMedia+=media[i]; } }
+  }
+  if(!completos.length || idx===0) return null;
+  const factor = sumMedia>0 ? sumVig/sumMedia : 1;
+  let prev=0;
+  for(let i=idx;i<12;i++){ if(media[i]!=null) prev += media[i]*factor; }
+  return {real, prev:Math.round(prev), total:Math.round(real+prev), factor, histN:completos.length, idx};
+}
+function renderIngrForecast(){
+  const anios = DATA.anios || [];
+  const vig = anios.length ? anios[anios.length-1] : null;
+  const panel = document.getElementById('ingrFcPanel');
+  // Si el año vigente está completo, no hay nada que prever: ocultar el panel entero
+  if(!vig || !esParcial(vig)){ panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  // Chips de métrica (solo peso y líneas tienen sentido para ingredientes)
+  const metrics = [['peso','metric_peso'],['lineas','metric_lineas']];
+  const mc = document.getElementById('ingrFcMetricChips');
+  mc.innerHTML = metrics.map(([k,lbl])=>`<button class="minichip${k===ingrFcMetric?' active':''}" data-m="${k}">${t(lbl)}</button>`).join('');
+  mc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ ingrFcMetric=c.dataset.m; renderIngrForecast(); });
+  document.getElementById('ingrFcSearch').oninput = drawIngrFcTable;
+  drawIngrFcTable();
+}
+function drawIngrFcTable(){
+  const anios = DATA.anios || [];
+  const vig = anios[anios.length-1];
+  const serie = serieIngredientes(ingrFcMetric);
+  const isPeso = ingrFcMetric==='peso';
+  const f = isPeso ? fmt1 : fmt;
+  const q = (document.getElementById('ingrFcSearch')?.value || '').toLowerCase().trim();
+  // Calcular previsión por ingrediente, descartar los que no se pueden prever
+  let rows = Object.entries(serie).map(([cod,s])=>{
+    const fc = preverIngrediente(s, anios); return fc ? {cod, nombre:s.nombre, ...fc} : null;
+  }).filter(Boolean);
+  if(q) rows = rows.filter(r=>r.nombre.toLowerCase().includes(q) || r.cod.toLowerCase().includes(q));
+  rows.sort((a,b)=>b.total - a.total);
+  // Mes hasta el que hay datos reales (etiqueta de la columna "Real")
+  const lastIdx = rows.length ? Math.max(...rows.map(r=>r.idx)) : 5;
+  const mesAbbr = (MESES_I18N[LANG]||MESES_I18N.es)[Math.max(0,lastIdx-1)].slice(0,3);
+  const arrowFor = factor => { const p=(factor-1)*100; return p>0.5?'▲':(p<-0.5?'▼':'■'); };
+  const clsFor = factor => { const p=(factor-1)*100; return p>0.5?'accent':(p<-0.5?'pink':'ink3'); };
+  document.getElementById('tblIngrFc').innerHTML =
+    `<thead><tr><th>${t('th_ingrediente')}</th><th class="num">${t('th_ingrfc_real').replace('{m}',mesAbbr)}</th>`+
+    `<th class="num">${t('th_ingrfc_prev')}</th><th class="num">${t('th_ingrfc_total')}</th>`+
+    `<th class="num">${t('th_ingrfc_factor')}</th><th class="num">${t('th_ingrfc_hist')}</th></tr></thead><tbody>`+
+    rows.map(r=>{
+      const pct = ((r.factor-1)*100).toLocaleString(LOCALES[LANG],{maximumFractionDigits:0});
+      const nm = r.nombre.length>30 ? r.nombre.slice(0,30)+'…' : r.nombre;
+      return `<tr><td title="${r.nombre} · ${r.cod}">${nm}</td>`+
+        `<td class="num">${f(r.real)}</td>`+
+        `<td class="num" style="color:var(--warn)">${f(r.prev)}</td>`+
+        `<td class="num" style="font-weight:700">${f(r.total)}</td>`+
+        `<td class="num" style="color:var(--${clsFor(r.factor)})">${arrowFor(r.factor)} ${r.factor>=1?'+':''}${pct}%</td>`+
+        `<td class="num">${r.histN}</td></tr>`;
+    }).join('') + '</tbody>';
+  document.getElementById('ingrFcNote').innerHTML =
+    `<span style="color:var(--warn)">◇ ${t('ingrfc_note').replace('{y}',vig)}</span>`;
+}
+
+// Carga de trabajo por técnico de lab: barras agrupadas (año A vs año B)
+function renderCompLab(){
+  const A = scopeYoY(yoyA), B = scopeYoY(yoyB);
+  if(!A || !B){ destroy('compLab'); return; }
+  // Unir técnicos de ambos años, ordenar por líneas del año reciente (B)
+  const mapA = {}; (A.lab||[]).forEach(x=>mapA[x.nombre]=x.lineas);
+  const mapB = {}; (B.lab||[]).forEach(x=>mapB[x.nombre]=x.lineas);
+  const nombres = [...new Set([...Object.keys(mapB), ...Object.keys(mapA)])]
+    .sort((x,y)=>(mapB[y]||0)-(mapB[x]||0));
+  destroy('compLab');
+  charts.compLab = new Chart(document.getElementById('chCompLab'),{
+    type:'bar',
+    data:{labels:nombres, datasets:[
+      {label:yoyLabel(yoyA), data:nombres.map(n=>mapA[n]||0), backgroundColor:C.ink3, borderRadius:4},
+      {label:yoyLabel(yoyB), data:nombres.map(n=>mapB[n]||0), backgroundColor:C.accent2, borderRadius:4}
+    ]},
+    options:gridOpts({plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid},beginAtZero:true}}})
+  });
+}
+
+function renderYoYCards(){
+  const host = document.getElementById('yoyCards');
+  const note = document.getElementById('yoyNote');
+  const A = scopeYoY(yoyA), B = scopeYoY(yoyB);
+  if(!A || !B || yoyA===yoyB){
+    host.innerHTML = ''; note.textContent = t('yoy_nodata'); return;
+  }
+  host.innerHTML = yoyDefs().map(([k,lblKey,isFloat])=>{
+    const cur = B.kpis[k], prev = A.kpis[k];
+    const d = pctTxt(cur, prev);
+    const curTxt = isFloat ? fmt1(cur) : fmt(cur);
+    const prevTxt = isFloat ? fmt1(prev) : fmt(prev);
+    return `<div class="yoy-card"><div class="yoy-l">${t(lblKey)}</div>`+
+      `<div class="yoy-v">${curTxt}</div>`+
+      `<div class="yoy-d ${d.cls}"><span class="cmp-arrow">${d.arrow}</span>${d.txt} <span class="prev">${t('yoy_vs')} ${prevTxt}</span></div></div>`;
+  }).join('');
+  // Nota contextual:
+  // - modo YTD activo y recortando → comparación justa "hasta mes N", con matiz del +~0,4%
+  // - modo normal → aviso si alguno de los dos años es parcial (comparación desigual)
+  if(yoyYTD && mesesVigente()<12){
+    note.innerHTML = `<span style="color:var(--accent2)">◷ ${t('yoy_ytd_note').replace('{n}',mesesVigente())}</span>`;
+  } else {
+    const avisos = [yoyB, yoyA].filter(esParcial)
+      .map(y=>t('yoy_note_partial').replace('{y}',y).replace('{n}',mesesDe(y)));
+    note.innerHTML = avisos.length ? `<span style="color:var(--warn)">${[...new Set(avisos)].join('<br>')}</span>` : '';
+  }
+}
+
+// Devuelve, para la métrica activa, un array de 12 valores por año: {anio: [v...]}.
+function serieMensualPorAnio(metric){
+  const out = {};
+  (DATA.serieMensual||[]).forEach(m=>{
+    (out[m.anio] = out[m.anio] || new Array(12).fill(null))[parseInt(m.ym.slice(5,7),10)-1] = m[metric];
+  });
+  return out;
+}
+
+// Previsión de los meses restantes del año vigente (parcial) por estacionalidad histórica
+// ajustada al nivel del propio año. Devuelve {idxDesde, valores[12], factor} o null.
+function preverAnioVigente(metric){
+  const anios = DATA.anios || [];
+  if(!anios.length) return null;
+  const vig = anios[anios.length-1];
+  if(!esParcial(vig)) return null;                 // el último año ya está completo: nada que prever
+  const completos = anios.filter(a=>!esParcial(a));
+  if(!completos.length) return null;               // sin años completos no hay base histórica
+  const serie = serieMensualPorAnio(metric);
+  // Media histórica por mes (solo años completos)
+  const media = new Array(12).fill(0).map((_,i)=>{
+    const vs = completos.map(a=>serie[a][i]).filter(v=>v!=null);
+    return vs.length ? vs.reduce((s,v)=>s+v,0)/vs.length : null;
+  });
+  // Factor de nivel: cuánto va el año vigente sobre la media histórica en los meses ya conocidos
+  const vigVals = serie[vig] || [];
+  let sumVig = 0, sumMedia = 0, idxDesde = 0;
+  for(let i=0;i<12;i++){
+    if(vigVals[i]!=null){ sumVig += vigVals[i]; sumMedia += media[i]||0; idxDesde = i+1; }
+  }
+  const factor = sumMedia>0 ? sumVig/sumMedia : 1;
+  // Valores previstos para los meses futuros (incluye el punto conocido previo para enganchar la línea)
+  const valores = new Array(12).fill(null);
+  for(let i=idxDesde;i<12;i++){ if(media[i]!=null) valores[i] = Math.round(media[i]*factor); }
+  if(idxDesde>0 && idxDesde<=12) valores[idxDesde-1] = vigVals[idxDesde-1]; // empalme visual
+  return {idxDesde, valores, factor, anio:vig};
+}
+
+let seasonForecast = true;   // mostrar previsión por defecto
+function renderSeasonal(){
+  const MK = metricKeys();
+  // Asegurar que la métrica activa existe en el modelo actual (al cambiar de centro)
+  if(!MK.some(([k])=>k===seasonMetric)) seasonMetric = MK[0][0];
+  // Chips de métrica + toggle de previsión
+  const mc = document.getElementById('seasonMetricChips');
+  mc.innerHTML = MK.map(([k,lbl])=>`<button class="minichip${k===seasonMetric?' active':''}" data-m="${k}">${t(lbl)}</button>`).join('')
+    + `<button class="minichip fc${seasonForecast?' active':''}" id="fcToggle">${t('forecast_toggle')}</button>`;
+  mc.querySelectorAll('.minichip:not(.fc)').forEach(c=>c.onclick=()=>{ seasonMetric=c.dataset.m; renderSeasonal(); });
+  document.getElementById('fcToggle').onclick=()=>{ seasonForecast=!seasonForecast; renderSeasonal(); };
+
+  const anios = DATA.anios || [];
+  const palette = [C.accent, C.accent2, '#6aa84f', C.pink, '#8e7cc3', '#d9a23c'];
+  const serie = serieMensualPorAnio(seasonMetric);
+  // Una línea por año
+  const datasets = anios.map((a,i)=>{
+    const col = palette[i % palette.length];
+    return {label:a, data:(serie[a]||new Array(12).fill(null)).slice(), borderColor:col, backgroundColor:col,
+            tension:.32, borderWidth:2.5, pointRadius:2.5, pointHoverRadius:5, spanGaps:true,
+            borderDash: esParcial(a)?[6,4]:[]};
+  });
+  // Línea de previsión del año vigente (prolongación punteada fina)
+  const fc = seasonForecast ? preverAnioVigente(seasonMetric) : null;
+  if(fc){
+    const colVig = palette[(anios.length-1) % palette.length];
+    datasets.push({label:`${fc.anio} · ${t('forecast_label')}`, data:fc.valores,
+      borderColor:colVig, backgroundColor:colVig, tension:.32, borderWidth:2,
+      pointRadius:2, pointStyle:'rectRot', borderDash:[2,3], spanGaps:false});
+  }
+  const labels = MESES_I18N[LANG] || MESES_I18N.es;
+  destroy('seasonal');
+  charts.seasonal = new Chart(document.getElementById('chSeasonal'),{
+    type:'line',
+    data:{labels:labels.map(s=>s.slice(0,3)), datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{grid:{color:C.grid}},y:{grid:{color:C.grid},beginAtZero:true}}}
+  });
+  // Nota explicativa del método cuando hay previsión activa
+  const note = document.getElementById('seasonalNote');
+  if(note){
+    if(fc){
+      const pct = ((fc.factor-1)*100).toLocaleString(LOCALES[LANG],{maximumFractionDigits:1});
+      const signo = fc.factor>=1?'+':'';
+      note.innerHTML = `<span style="color:var(--warn)">◇ ${t('forecast_note').replace('{y}',fc.anio).replace('{p}',signo+pct)}</span>`;
+    } else {
+      note.textContent = t('note_seasonal');
+    }
+  }
+}
+
+function renderComposicion(){
+  const anios = DATA.anios || [];
+  // 1) Composición por tipo (% de fórmulas distintas)
+  const tipoOrder = TIPO_KEYS; // ['Fórmula completa','Disoluciones','Trial','Base','Base + Trial']
+  const dsTipos = tipoOrder.map(tp=>({
+    label:tTipo(tp),
+    data:anios.map(a=>{
+      const det = DATA.scopes[a].tiposDetalle||[];
+      const tot = det.reduce((s,x)=>s+x.formulas,0) || 1;
+      const found = det.find(x=>x.tipo===tp);
+      return found ? +(found.formulas/tot*100).toFixed(1) : 0;
+    }),
+    backgroundColor:tipoColor(tp), borderRadius:3, stack:'s'
+  }));
+  destroy('compTipos');
+  charts.compTipos = new Chart(document.getElementById('chCompTipos'),{
+    type:'bar',
+    data:{labels:anios, datasets:dsTipos},
+    options:gridOpts({plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{stacked:true,grid:{color:C.grid}},y:{stacked:true,grid:{color:C.grid},beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}}})
+  });
+
+  // 2) Lab vs Robot (% de líneas)
+  const dsLR = [
+    {label:t('ds_lab'), data:anios.map(a=>{const k=DATA.scopes[a].kpis; const tot=k.lab+k.robot||1; return +(k.lab/tot*100).toFixed(1);}), backgroundColor:C.lab, borderRadius:3, stack:'s'},
+    {label:t('ds_robot'), data:anios.map(a=>{const k=DATA.scopes[a].kpis; const tot=k.lab+k.robot||1; return +(k.robot/tot*100).toFixed(1);}), backgroundColor:C.robot, borderRadius:3, stack:'s'}
+  ];
+  destroy('compLabRobot');
+  charts.compLabRobot = new Chart(document.getElementById('chCompLabRobot'),{
+    type:'bar',
+    data:{labels:anios, datasets:dsLR},
+    options:gridOpts({plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{stacked:true,grid:{color:C.grid}},y:{stacked:true,grid:{color:C.grid},beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}}})
+  });
+}
+
+// Ranking comparativo A→B para perfumistas o ingredientes
+function renderRanking(tblId, scopeKey, nameField, valField){
+  const A = scopeYoY(yoyA), B = scopeYoY(yoyB);
+  if(!A || !B){ document.getElementById(tblId).innerHTML = ''; return; }
+  const mapA = {}; (A[scopeKey]||[]).forEach(x=>mapA[x[nameField]] = x[valField]);
+  const mapB = {}; (B[scopeKey]||[]).forEach(x=>mapB[x[nameField]] = x[valField]);
+  // Unir nombres, ordenar por valor en B (año reciente) desc. Hasta 50 filas;
+  // el contenedor .tbl-scroll (max-height) hace scroll cuando hay más de las visibles.
+  const nombres = [...new Set([...Object.keys(mapB), ...Object.keys(mapA)])];
+  const rows = nombres.map(n=>({n, b:mapB[n]||0, a:mapA[n]||0}))
+    .sort((x,y)=>y.b - x.b).slice(0,50);
+  const nameHdr = scopeKey==='perfumers' ? t('th_responsable')
+                : (scopeKey==='lab' ? t('th_tecnico') : t('th_ingrediente'));
+  document.getElementById(tblId).innerHTML =
+    `<thead><tr><th>${nameHdr}</th><th class="num">${yoyLabel(yoyA)}</th><th class="num">${yoyLabel(yoyB)}</th><th class="num">${t('th_var')}</th></tr></thead><tbody>`+
+    rows.map(r=>{
+      const d = pctTxt(r.b, r.a);
+      const nm = r.n.length>26 ? r.n.slice(0,26)+'…' : r.n;
+      return `<tr><td title="${r.n}">${nm}</td><td class="num">${fmt(r.a)}</td><td class="num">${fmt(r.b)}</td>`+
+        `<td class="num" style="color:var(--${d.cls==='up'?'accent':(d.cls==='down'?'pink':'ink3')})">${d.arrow} ${d.txt}</td></tr>`;
+    }).join('') + '</tbody>';
+}
+
+// ===================== COMPARATIVA CROSS-CENTRO =====================
+// Compara el consumo de ingredientes entre Séneca y Granollers por PESO (g), única
+// magnitud comparable (misma unidad física). Lee DATASETS directamente, no el centro activo.
+// Granollers: MP solo 2025 (unión producción+sampleRequests). Séneca: topIngredientes ALL.
+// Peso (g) de ingredientes de un centro, sea modelo formulas (topIngredientes) o
+// samples (materiasPrimas = producción + sample requests). Devuelve {codigo:{nombre,peso}}.
+function pesoIngredientesCentro(id){
+  const ds = DATASETS[id]; const m = {};
+  if(!ds) return m;
+  if(ds.materiasPrimas){   // modelo samples (Granollers)
+    const mp = ds.materiasPrimas;
+    [...(mp.produccion||[]), ...(mp.sampleRequests||[])].forEach(x=>{
+      if(!m[x.codigo]) m[x.codigo]={nombre:x.nombre, peso:0};
+      m[x.codigo].peso += x.peso;
+    });
+  } else {                 // modelo formulas (Séneca, Dubai)
+    ((ds.scopes&&ds.scopes.ALL.topIngredientes)||[]).forEach(x=>{ m[x.codigo]={nombre:x.nombre, peso:x.peso}; });
+  }
+  return m;
+}
+// Centros disponibles para la comparativa de ingredientes (los que tienen datos de peso).
+function cmpCentrosIngr(){
+  return CENTROS.filter(c=>{
+    const ds = DATASETS[c.id]; if(!ds) return false;
+    return ds.materiasPrimas || (ds.scopes && ds.scopes.ALL && ds.scopes.ALL.topIngredientes);
+  });
+}
+// Paleta estable por centro para los gráficos comparativos.
+const CMP_COLORS = ['accent','accent2','warn','pink'];
+function cmpColor(i){ return C[CMP_COLORS[i % CMP_COLORS.length]] || C.ink2; }
+// Color estable de un centro según su posición en el registro CENTROS (no cambia al ocultar otros).
+function cmpColorCentro(id){ const i = CENTROS.findIndex(c=>c.id===id); return cmpColor(i<0?0:i); }
+// Filtro propio de la comparativa cross-centro: año + mes ([] = todos) + ubicaciones OCULTAS.
+// cmpOcultos = ids de centros que el usuario ha ocultado (por defecto ninguno = todos visibles).
+// cmpRobot = incluir las pesadas del robot (true) o solo el pesaje manual (false).
+let cmpYears = [], cmpMonths = [], cmpOcultos = [], cmpRobot = true;
+// Centros con datos comparables (los que tienen scopes/serieMensual). Orden del registro CENTROS.
+function cmpCentrosDisponibles(){ return CENTROS.filter(c=>DATASETS[c.id]); }
+// Centros efectivamente mostrados: los disponibles que no estén ocultos.
+function cmpCentrosActivos(){ return cmpCentrosDisponibles().filter(c=>!cmpOcultos.includes(c.id)); }
+function cmpCentroOn(id){ return !cmpOcultos.includes(id); }
+function cmpAniosDisponibles(){
+  const a = new Set();
+  cmpCentrosDisponibles().forEach(c=>((DATASETS[c.id]||{}).anios||[]).forEach(y=>a.add(y)));
+  return [...a].sort();
+}
+function cmpAnioOk(anio){ return !cmpYears.length || cmpYears.includes(anio); }
+function cmpMesOk(ym){ return !cmpMonths.length || cmpMonths.includes(ym.slice(5,7)); }
+function cmpYmOk(ym){ return cmpAnioOk(ym.slice(0,4)) && cmpMesOk(ym); }
+function renderCmpFilter(){
+  const wrap = document.getElementById('cmpYearChips'); if(!wrap) return;
+  const anios = cmpAniosDisponibles();
+  wrap.innerHTML = `<button class="chip${cmpYears.length===0?' active':''}" data-y="ALL">${t('chip_all_years')}</button>`+
+    anios.map(a=>`<button class="chip${cmpYears.includes(a)?' active':''}" data-y="${a}">${a}</button>`).join('');
+  wrap.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    const y=c.dataset.y;
+    if(y==='ALL'){ cmpYears=[]; cmpMonths=[]; }
+    else { const i=cmpYears.indexOf(y); if(i>=0) cmpYears.splice(i,1); else cmpYears.push(y); if(!cmpYears.length) cmpMonths=[]; }
+    renderComparativa();
+  });
+  // Meses: solo con algún año marcado (mirror del filtro global). Aplican a todos los años elegidos.
+  const mwrap = document.getElementById('cmpMonthChips');
+  const mgroup = document.getElementById('cmpMonthGroup');
+  if(mwrap){
+    if(!cmpYears.length){ mwrap.innerHTML=''; if(mgroup) mgroup.style.display='none'; }
+    else {
+      if(mgroup) mgroup.style.display='';
+      const setM=new Set();
+      cmpCentrosDisponibles().forEach(c=>((DATASETS[c.id]||{}).meses||[])
+        .forEach(m=>{ if(cmpYears.includes(m.anio)) setM.add(m.ym.slice(5,7)); }));
+      const mesCorto=x=>((MESES_I18N[LANG]||MESES_I18N.es)[parseInt(x,10)-1]||x).slice(0,3);
+      mwrap.innerHTML = `<button class="chip${cmpMonths.length===0?' active':''}" data-m="ALL">${t('chip_all_months')}</button>`+
+        [...setM].sort().map(x=>`<button class="chip${cmpMonths.includes(x)?' active':''}" data-m="${x}">${mesCorto(x)}</button>`).join('');
+      mwrap.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+        const m=c.dataset.m;
+        if(m==='ALL') cmpMonths=[]; else { const i=cmpMonths.indexOf(m); if(i>=0) cmpMonths.splice(i,1); else cmpMonths.push(m); }
+        renderComparativa();
+      });
+    }
+  }
+  // Ubicaciones: cada chip alterna mostrar/ocultar su centro. "Todos" = ninguno oculto.
+  const cc=document.getElementById('cmpCentroChips'); if(!cc) return;
+  const disp = cmpCentrosDisponibles();
+  cc.innerHTML = `<button class="chip${cmpOcultos.length===0?' active':''}" data-c="ALL">${t('chip_all_years')}</button>`+
+    disp.map(c=>`<button class="chip cmp-loc${cmpCentroOn(c.id)?' active':''}" data-c="${c.id}"><span class="loc-dot" style="background:${cmpColorCentro(c.id)}"></span>${c.label}</button>`).join('');
+  cc.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.c;
+    if(id==='ALL'){ cmpOcultos=[]; }
+    else {
+      const i=cmpOcultos.indexOf(id);
+      if(i>=0) cmpOcultos.splice(i,1);                              // mostrar de nuevo
+      else if(cmpCentrosActivos().length>1) cmpOcultos.push(id);    // ocultar (nunca el último)
+    }
+    renderComparativa();
+  });
+  // Toggle Robot: incluir/excluir las pesadas automáticas en evolución y pesaje.
+  const rc=document.getElementById('cmpRobotChips'); if(!rc) return;
+  rc.innerHTML = `<button class="chip robot-chip${cmpRobot?' active':''}" id="cmpRobotBtn">${t('ds_robot')}</button>`;
+  document.getElementById('cmpRobotBtn').onclick=()=>{ cmpRobot=!cmpRobot; renderComparativa(); };
+}
+// ¿hay algún filtro de periodo activo en la comparativa?
+function cmpSinFiltro(){ return !cmpYears.length && !cmpMonths.length; }
+// Pesadas mensuales de un centro: {ym: valor}. Respeta el toggle de robot (cmpRobot):
+// samples → manual (+robot si on); formulas → lab (+robot si on; líneas = lab+robot).
+function pesadasMensualCentro(id){
+  const ds = DATASETS[id]; const out = {};
+  if(!ds) return out;
+  if(ds.modelo==='samples'){
+    (ds.serieMensual||[]).forEach(m=>{ out[m.ym]=(m.manual||0)+(cmpRobot?(m.robot||0):0); });
+  } else {
+    (ds.serieMensual||[]).forEach(m=>{ out[m.ym]=cmpRobot?(m.lineas||0):(m.lab||0); });
+  }
+  return out;
+}
+// Entidades de "carga de pesaje" de un centro:
+//  · samples (Granollers) → estaciones {etiqueta, valor}, sumadas sobre el periodo.
+//  · formulas (Séneca/Dubai) → técnicos (lab) {nombre, valor} + barra robot si la hay.
+function cargaPesajeCentro(id){
+  const ds = DATASETS[id]; if(!ds) return {items:[], tipo:ds&&ds.modelo};
+  if(ds.modelo==='samples'){
+    // Excluir las estaciones robot (ROXY, tipo==='robot') si el toggle está desactivado
+    const est = (ds.estaciones||[]).filter(e=>cmpRobot || e.tipo!=='robot');
+    let items;
+    if(cmpSinFiltro()) items = est.map(e=>({label:e.etiqueta||e.modulo, valor:e.pesadas, esRobot:e.tipo==='robot'}));
+    else {
+      const estMes = ds.estacionesMes||{};
+      items = est.map(e=>{ const mp=estMes[e.modulo]||{}; const p=Object.keys(mp).filter(cmpYmOk).reduce((s,ym)=>s+mp[ym],0);
+        return {label:e.etiqueta||e.modulo, valor:p, esRobot:e.tipo==='robot'}; }).filter(x=>x.valor>0);
+    }
+    return {items, tipo:'samples'};
+  }
+  // formulas: técnicos (lab) + robot agregado
+  const sc = ds.scopes;
+  let tec;
+  if(cmpSinFiltro()) tec = (sc.ALL.lab||[]).map(x=>({label:x.nombre, valor:x.lineas}));
+  else { const acc={}; (ds.meses||[]).filter(m=>cmpYmOk(m.ym)).forEach(m=>((sc[m.ym]||{}).lab||[]).forEach(x=>{ acc[x.nombre]=(acc[x.nombre]||0)+(x.lineas||0); }));
+    tec = Object.entries(acc).map(([label,valor])=>({label,valor})); }
+  // robot (líneas sin técnico); se omite la barra si el toggle está desactivado
+  let rob = 0;
+  if(cmpRobot){
+    if(cmpSinFiltro()) rob = sc.ALL.kpis.robot||0;
+    else rob = (ds.meses||[]).filter(m=>cmpYmOk(m.ym)).reduce((s,m)=>s+(((sc[m.ym]||{}).kpis||{}).robot||0),0);
+  }
+  const items = rob>0 ? [...tec, {label:t('ds_robot'), valor:rob, esRobot:true}] : tec;
+  return {items, tipo:'formulas'};
+}
+// % automatización (robot/total) de un centro en el periodo.
+function autoCentro(id){
+  const ds=DATASETS[id]; if(!ds) return 0;
+  let man=0, rob=0;
+  if(ds.modelo==='samples'){
+    (ds.serieMensual||[]).filter(m=>cmpYmOk(m.ym)).forEach(m=>{ man+=m.manual||0; rob+=m.robot||0; });
+  } else {
+    const sc=ds.scopes;
+    if(cmpSinFiltro()){ man=sc.ALL.kpis.lab||0; rob=sc.ALL.kpis.robot||0; }
+    else (ds.meses||[]).filter(m=>cmpYmOk(m.ym)).forEach(m=>{ const k=(sc[m.ym]||{}).kpis||{}; man+=k.lab||0; rob+=k.robot||0; });
+  }
+  const tot=man+rob; return tot? +(rob/tot*100).toFixed(1) : 0;
+}
+// Total de pesadas de un centro en el periodo (para las tarjetas resumen).
+function totalPesadasCentro(id){
+  const s = pesadasMensualCentro(id);
+  return Object.keys(s).filter(cmpYmOk).reduce((a,ym)=>a+s[ym],0);
+}
+// Gráfico cruzado: pesadas/mes, una línea por centro ACTIVO. Misma unidad (nº de pesadas).
+function renderCmpEvol(){
+  if(!document.getElementById('chCmpEvol')) return;
+  const centros = cmpCentrosActivos();
+  if(!centros.length){ destroy('cmpEvol'); return; }
+  const series = {}; const setYm = new Set();
+  centros.forEach(c=>{ const s=pesadasMensualCentro(c.id); series[c.id]=s;
+    Object.keys(s).forEach(ym=>{ if(cmpYmOk(ym)) setYm.add(ym); }); });
+  const yms=[...setYm].sort();
+  destroy('cmpEvol');
+  charts.cmpEvol=new Chart(document.getElementById('chCmpEvol'),{
+    type:'line',
+    data:{labels:yms.map(mesLabelCorto),datasets:centros.map(c=>{
+      const col=cmpColorCentro(c.id);
+      return {label:c.label, data:yms.map(ym=>ym in series[c.id]?series[c.id][ym]:null),
+        borderColor:col, backgroundColor:col, tension:.3, borderWidth:2.5, pointRadius:1.5, spanGaps:true};
+    })},
+    options:gridOpts({plugins:{legend:{display:true,position:'bottom'}},scales:{x:{grid:{color:C.grid},ticks:{maxTicksLimit:24}},y:{grid:{color:C.grid},beginAtZero:true}}})
+  });
+}
+function renderComparativa(){
+  if(!document.getElementById('chCmpIngr')) return;          // sección no presente
+  if(cmpCentrosDisponibles().length < 2){ return; }          // hacen falta ≥2 centros cargados
+  renderCmpFilter();
+  renderCmpEvol();
+  // Ingredientes: solo los centros activos (filtro de ubicaciones) que tengan datos de peso
+  const centros = cmpCentrosActivos().filter(c=>{
+    const ds=DATASETS[c.id]; return ds && (ds.materiasPrimas || (ds.scopes&&ds.scopes.ALL&&ds.scopes.ALL.topIngredientes));
+  });
+  const porCentro = {}; centros.forEach(c=>{ porCentro[c.id] = pesoIngredientesCentro(c.id); });
+  // Universo común: ingredientes presentes en ≥2 de los centros activos (o ≥1 si solo hay 1 activo).
+  const minPres = centros.length>=2 ? 2 : 1;
+  const codigos = new Set(); centros.forEach(c=>Object.keys(porCentro[c.id]).forEach(k=>codigos.add(k)));
+  const comun = [...codigos].map(cod=>{
+    const pesos = {}; let nombre='', presentes=0, total=0;
+    centros.forEach(c=>{
+      const x = porCentro[c.id][cod];
+      if(x){ pesos[c.id]=x.peso; total+=x.peso; presentes++; if(!nombre) nombre=x.nombre; }
+      else pesos[c.id]=0;
+    });
+    return {cod, nombre, pesos, presentes, total};
+  }).filter(r=>r.presentes>=minPres).sort((a,b)=>b.total-a.total);
+  document.getElementById('cmpSearch').oninput = ()=>drawCmp(comun, centros);
+  drawCmpChart(comun, centros);
+  drawCmp(comun, centros);
+  // Nota metodológica honesta (lista de centros comparados)
+  document.getElementById('cmpNote').innerHTML =
+    `<span style="color:var(--accent2)">◆ ${t('cmp_note_n').replace('{n}',comun.length).replace('{centros}',centros.map(c=>c.label).join(', '))}</span>`;
+  renderCmpPesaje();
+}
+// Carga de pesaje por ubicación: un panel con barras por cada centro activo.
+// Séneca/Dubai → técnicos (+robot si hay); Granollers → estaciones. Misma unidad: nº de pesadas.
+function renderCmpPesaje(){
+  const grid = document.getElementById('cmpPesajeGrid'); if(!grid) return;
+  const centros = cmpCentrosActivos();
+  // Limpiar charts de pesaje previos
+  Object.keys(charts).filter(k=>k.startsWith('cmpPes_')).forEach(destroy);
+  // Datos por centro
+  const datos = centros.map(c=>{
+    const carga = cargaPesajeCentro(c.id);
+    const items = carga.items.slice().sort((a,b)=>(b.valor||0)-(a.valor||0));
+    const total = items.reduce((s,x)=>s+(x.valor||0),0);
+    const nEnt = items.filter(x=>!x.esRobot).length;
+    return {c, items, total, nEnt, tipo:carga.tipo, auto:autoCentro(c.id)};
+  });
+  // Tarjetas resumen
+  const autoLbl = t('kpi_pctrobot').toLowerCase();
+  document.getElementById('cmpPesajeHead').innerHTML = datos.map(d=>{
+    const media = d.items.length ? Math.round(d.total/d.items.length) : 0;
+    const entLbl = d.tipo==='samples' ? t('cmp_pes_estaciones') : t('cmp_pes_tecnicos');
+    return `<span class="cmp-pes-card" style="border-left-color:${cmpColorCentro(d.c.id)}"><b>${d.c.label}</b> · ${fmt(d.total)} ${t('cmp_pes_pesadas')} · ${d.nEnt} ${entLbl} · ${t('cmp_pes_media')} ${fmt(media)} · ${autoLbl} <b>${d.auto}%</b></span>`;
+  }).join('');
+  // Grid de canvas (uno por centro). Columnas según nº de centros.
+  grid.style.gridTemplateColumns = `repeat(${Math.min(datos.length,3)||1}, 1fr)`;
+  grid.innerHTML = datos.map(d=>
+    `<div><div class="flabel" style="margin-bottom:10px">${d.c.label} · ${d.nEnt} ${d.tipo==='samples'?t('cmp_pes_estaciones'):t('cmp_pes_tecnicos')}</div>`+
+    `<div class="chartbox tall"><canvas id="cvCmpPes_${d.c.id}"></canvas></div></div>`).join('');
+  // Dibujar cada gráfico
+  datos.forEach(d=>{
+    const key='cmpPes_'+d.c.id, col=cmpColorCentro(d.c.id);
+    charts[key] = new Chart(document.getElementById('cvCmpPes_'+d.c.id),{
+      type:'bar',
+      data:{labels:d.items.map(x=>x.label),datasets:[{data:d.items.map(x=>x.valor),
+        backgroundColor:d.items.map(x=>x.esRobot?'#c2541f':col),borderRadius:4}]},
+      options:gridOpts({indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:C.grid},beginAtZero:true},y:{grid:{display:false}}}})
+    });
+  });
+}
+function drawCmpChart(comun, centros){
+  const top = comun.slice(0,15);   // top 15 por peso para legibilidad del gráfico
+  destroy('cmpIngr');
+  charts.cmpIngr = new Chart(document.getElementById('chCmpIngr'),{
+    type:'bar',
+    data:{labels:top.map(x=>x.nombre.length>24?x.nombre.slice(0,24)+'…':x.nombre),
+      datasets:centros.map(c=>({label:c.label, data:top.map(x=>x.pesos[c.id]||0),
+        backgroundColor:cmpColorCentro(c.id), borderRadius:3}))},
+    options:gridOpts({indexAxis:'y',plugins:{legend:{display:true,position:'bottom'}},
+      scales:{x:{grid:{color:C.grid},beginAtZero:true},y:{grid:{display:false}}}})
+  });
+}
+function drawCmp(comun, centros){
+  const q = (document.getElementById('cmpSearch')?.value||'').toLowerCase().trim();
+  let rows = q ? comun.filter(x=>x.nombre.toLowerCase().includes(q)||x.cod.toLowerCase().includes(q)) : comun;
+  const head = `<thead><tr><th>${t('th_ingrediente')}</th><th class="num">${t('th_codigo')}</th>`+
+    centros.map(c=>`<th class="num">${c.label} (g)</th>`).join('')+`</tr></thead><tbody>`;
+  document.getElementById('tblCmp').innerHTML = head +
+    rows.map(x=>{
+      const nm = x.nombre.length>30?x.nombre.slice(0,30)+'…':x.nombre;
+      return `<tr><td title="${x.nombre}">${nm}</td><td class="num mono">${x.cod}</td>`+
+        centros.map(c=>{ const v=x.pesos[c.id]||0; return `<td class="num"${v?'':' style="color:var(--ink3)"'}>${v?fmt1(v):'—'}</td>`; }).join('')+
+        `</tr>`;
+    }).join('') + '</tbody>';
+}
+
+// === Mapa de calor: responsable × mes (siempre sobre los 3 meses del T1) ===
+function renderHeatPerf(){
+  const host = document.getElementById('heatPerf');
+  // Columnas: si hay exactamente un año seleccionado → sus meses; si no → un eje por año.
+  const meses = (curYears.length===1) ? (DATA.meses||[]).filter(m=>m.anio===curYears[0])
+                                      : (DATA.anios||[]).map(a=>({ym:a}));
+  // Ranking de responsables por fórmulas totales (scope ALL), top 14
+  const orden = (DATA.scopes.ALL.perfumers || []).slice(0,14).map(p=>p.nombre);
+  if(!orden.length || !meses.length){ const nd={es:'Sin datos suficientes.',en:'Not enough data.',fr:'Données insuffisantes.'}; host.innerHTML = `<p class="note">${nd[LANG]||nd.es}</p>`; return; }
+  // Mapa nombre -> {ym: formulas}
+  const porMes = {};
+  meses.forEach(m=>{
+    (DATA.scopes[m.ym].perfumers || []).forEach(p=>{
+      (porMes[p.nombre] = porMes[p.nombre] || {})[m.ym] = p.formulas;
+    });
+  });
+  let max = 1;
+  orden.forEach(n => meses.forEach(m => { max = Math.max(max, (porMes[n]||{})[m.ym]||0); }));
+  const shade = v => {
+    if(!v) return '';
+    const op = 0.12 + 0.78*(v/max);            // 0.12–0.90 de opacidad
+    return `background:rgba(168,204,31,${op.toFixed(3)})`;
+  };
+  host.innerHTML =
+    `<table><thead><tr><th class="rowh">${t('th_responsable')}</th>` +
+    meses.map(m=>`<th>${mesLabel(m.ym)}</th>`).join('') +
+    `<th>${t('heat_total')}</th></tr></thead><tbody>` +
+    orden.map(n=>{
+      const fila = porMes[n] || {};
+      const total = meses.reduce((s,m)=>s+(fila[m.ym]||0),0);
+      return `<tr><td class="rowlabel">${n}</td>` +
+        meses.map(m=>{
+          const v = fila[m.ym]||0;
+          return `<td><span class="cell${v?'':' empty'}" style="${shade(v)}">${v?fmt(v):'·'}</span></td>`;
+        }).join('') +
+        `<td><span class="cell" style="background:var(--barbg)">${fmt(total)}</span></td></tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+// === Proyectos: tabla filtrable por tipo + búsqueda, sensible al filtro de mes ===
+let proyFiltroTipo = 'ALL';
+function renderProyectos(){
+  const host = document.getElementById('proyContent');
+  const kp = document.getElementById('kpisProy');
+  if(!DATA.proyectos){
+    kp.innerHTML = '';
+    host.innerHTML = t('regen_proy');
+    return;
+  }
+  // Restaurar estructura si un render anterior mostró el aviso "regen"
+  if(!document.getElementById('tblProy')){
+    host.innerHTML =
+      `<div class="tbl-toolbar"><input id="proySearch" class="search" data-i18n-ph="ph_proy" placeholder="${t('ph_proy')}"><div id="proyTipoChips" class="minichips"></div></div>` +
+      `<div class="tbl-scroll"><table id="tblProy"></table></div><div class="note" id="proyCount"></div>`;
+  }
+  document.getElementById('proySearch').oninput = drawProyTable;  // idempotente
+  const todos = DATA.proyectos;
+  const ofMonth = todos.filter(enPeriodo);
+  // KPIs del periodo
+  const distintos = tp => ofMonth.filter(p=>p.tipo===tp).length;
+  kp.innerHTML =
+    kpiCard(t('kpi_proyectos'), fmt(ofMonth.length), t('sub_distintas')) +
+    kpiCard(t('kpi_completas'), fmt(distintos('Fórmula completa')), '','c2') +
+    kpiCard(t('kpi_trials'), fmt(distintos('Trial')+distintos('Base + Trial')), '','c3') +
+    kpiCard(t('kpi_bases'), fmt(distintos('Base')+distintos('Base + Trial')), '','c4') +
+    kpiCard(t('kpi_disol'), fmt(distintos('Disoluciones')), t('sub_bxs'),'c2');
+  // Chips de tipo
+  const tipos = ['ALL', ...TIPO_KEYS];
+  document.getElementById('proyTipoChips').innerHTML = tipos.map(tk=>
+    `<button class="minichip${tk===proyFiltroTipo?' active':''}" data-tipo="${tk}">${tk==='ALL'?t('chip_todos'):tTipo(tk)}</button>`).join('');
+  document.getElementById('proyTipoChips').querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{
+    proyFiltroTipo = c.dataset.tipo; renderProyectos();
+  });
+  drawProyTable();
+}
+function drawProyTable(){
+  const todos = DATA.proyectos || [];
+  const q = (document.getElementById('proySearch')?.value || '').toLowerCase().trim();
+  let rows = todos.filter(enPeriodo);
+  if(proyFiltroTipo!=='ALL') rows = rows.filter(p=>p.tipo===proyFiltroTipo);
+  if(q) rows = rows.filter(p=>
+    (p.codigo||'').toLowerCase().includes(q) ||
+    (p.nombre||'').toLowerCase().includes(q) ||
+    (p.resp||'').toLowerCase().includes(q) ||
+    (p.tecnico||'').toLowerCase().includes(q));
+  const shown = rows.slice(0,400);
+  // "+N" cuando varios técnicos pesaron la fórmula (tecnico = el principal)
+  const tecCell = p => {
+    if(!p.tecnico) return '—';
+    const extra = p.nTecnicos>1 ? ` <span class="tec-mas" title="${t('tec_varios').replace('{n}',p.nTecnicos)}">+${p.nTecnicos-1}</span>` : '';
+    return p.tecnico + extra;
+  };
+  document.getElementById('tblProy').innerHTML =
+    `<thead><tr><th>${t('th_codigo')}</th><th>${t('th_nombre_formula')}</th><th>${t('th_responsable')}</th><th>${t('th_pesado')}</th><th>${t('th_tipo')}</th><th>${t('th_mes')}</th><th class="num">${t('th_lineas')}</th><th class="num">${t('th_peso')}</th></tr></thead><tbody>` +
+    shown.map(p=>
+      `<tr><td class="mono">${p.codigo||'—'}</td><td>${p.nombre||`<span style="color:var(--ink3)">${t('sin_nombre')}</span>`}</td><td>${p.resp||'—'}</td>`+
+      `<td>${tecCell(p)}</td>`+
+      `<td><span class="tipo-pill" style="background:${tipoColor(p.tipo)}22;color:${tipoColor(p.tipo)}">${tTipo(p.tipo)}</span></td>`+
+      `<td>${mesLabel(p.ym)}</td><td class="num">${fmt(p.lineas)}</td><td class="num">${fmt1(p.peso)}</td></tr>`).join('') +
+    '</tbody>';
+  document.getElementById('proyCount').textContent =
+    `${fmt(rows.length)} ${t('proy_count')}` + (rows.length>shown.length?` · ${t('proy_showing')} ${shown.length}`:'');
+}
+
+// === Trazabilidad por lote (top 80 del periodo) ===
+function renderLotes(){
+  const host = document.getElementById('lotesContent');
+  const S = scopeActual();
+  if(!S.lotes){
+    host.innerHTML = t('regen_lotes');
+    return;
+  }
+  if(!document.getElementById('tblLotes')){
+    host.innerHTML =
+      `<div class="tbl-toolbar"><input id="lotesSearch" class="search" data-i18n-ph="ph_lotes" placeholder="${t('ph_lotes')}"></div>`+
+      `<div class="tbl-scroll"><table id="tblLotes"></table></div>`+
+      `<div class="note">${t('note_lotes')}</div>`;
+  }
+  document.getElementById('lotesSearch').oninput = drawLotesTable;  // idempotente
+  drawLotesTable();
+}
+function drawLotesTable(){
+  const S = scopeActual();
+  const q = (document.getElementById('lotesSearch')?.value || '').toLowerCase().trim();
+  let rows = S.lotes || [];
+  if(q) rows = rows.filter(l=>
+    (l.nombre||'').toLowerCase().includes(q) ||
+    (l.cod||'').toLowerCase().includes(q) ||
+    (l.lote||'').toLowerCase().includes(q));
+  const maxLn = rows.length ? Math.max(...rows.map(l=>l.lineas)) : 1;
+  document.getElementById('tblLotes').innerHTML =
+    `<thead><tr><th>${t('th_ingrediente')}</th><th class="num">${t('th_codigo')}</th><th class="num">${t('th_lote')}</th><th class="num">${t('th_lineas')}</th><th class="num">${t('th_formulas')}</th><th class="num">${t('th_peso')}</th></tr></thead><tbody>` +
+    rows.map(l=>{
+      const w = Math.round(l.lineas/maxLn*100);
+      return `<tr><td>${l.nombre||'—'}</td><td class="num mono">${l.cod||'—'}</td><td class="num mono">${l.lote||'—'}</td>`+
+        `<td class="num bar-cell"><span class="bar-bg" style="width:${w}%"></span><span>${fmt(l.lineas)}</span></td>`+
+        `<td class="num">${fmt(l.formulas)}</td><td class="num">${fmt1(l.peso)}</td></tr>`;
+    }).join('') + '</tbody>';
+}
+
+// ===== Filtro global multi-año + mes + YTD =====
+// Años efectivos: curYears si hay alguno, si no todos los del dataset.
+function aniosEfectivos(){ return curYears.length ? [...curYears].sort() : (DATA.anios||[]); }
+// Último mes (1..12) con datos en el año más reciente → corte del YTD.
+function mesVigenteNum(){
+  const an = DATA.anios||[]; if(!an.length) return 12;
+  const ult = an[an.length-1];
+  return (DATA.meses||[]).filter(m=>m.anio===ult).reduce((mx,m)=>Math.max(mx,parseInt(m.ym.slice(5,7),10)),0) || 12;
+}
+// Lista de ym que componen el periodo actual (respeta años, mes y YTD).
+function mesesSeleccionados(){
+  const anios = new Set(aniosEfectivos());
+  const N = ytdGlobal ? mesVigenteNum() : 12;
+  return (DATA.meses||[]).filter(m=>{
+    if(!anios.has(m.anio)) return false;
+    const mm = parseInt(m.ym.slice(5,7),10);
+    if(curMonths.length) return curMonths.includes(m.ym.slice(5,7));   // meses concretos en todos los años
+    return mm<=N;                                              // YTD recorta; si no, todos
+  }).map(m=>m.ym);
+}
+// True si NO hay ningún filtro activo (todos los años, sin meses, sin YTD) → usar scope ALL directo.
+function periodoEsAll(){ return !curYears.length && !curMonths.length && !ytdGlobal; }
+
+// Suma genérica de varios scopes mensuales en uno solo (KPIs + todas las listas).
+const _aggCache = {};
+function aggScopes(yms){
+  const ckey = CENTER + '|' + yms.join(',');   // clave por centro: los ym coinciden entre centros
+  if(_aggCache[ckey]) return _aggCache[ckey];
+  const base = DATA.scopes[yms[0]] || DATA.scopes.ALL;
+  const KPI_KEYS = Object.keys(base.kpis||{}).filter(k=>k!=='samplesDia' && k!=='pctRobot');
+  const kpis = {}; KPI_KEYS.forEach(k=>kpis[k]=0);
+  const acc = {lab:{}, perfumers:{}, topIngredientes:{}, lotes:{}, tipos:{}};
+  const sumList = (dst, list, keyField, fields)=>{
+    (list||[]).forEach(x=>{
+      const id = x[keyField];
+      const o = dst[id] || (dst[id] = Object.assign({}, x, Object.fromEntries(fields.map(f=>[f,0]))));
+      fields.forEach(f=> o[f] = (o[f]||0) + (x[f]||0));
+    });
+  };
+  yms.forEach(ym=>{
+    const s = DATA.scopes[ym]; if(!s) return;
+    KPI_KEYS.forEach(k=> kpis[k] += (s.kpis[k]||0));
+    sumList(acc.lab, s.lab, 'nombre', ['lineas','peso','formulas']);
+    sumList(acc.perfumers, s.perfumers, 'nombre', ['formulas','lineas','completas','trials','bases','disoluciones']);
+    sumList(acc.topIngredientes, s.topIngredientes, 'codigo', ['lineas','peso']);
+    sumList(acc.lotes, s.lotes, 'lote', ['lineas','peso','formulas']);
+    (s.tiposDetalle||[]).forEach(td=>{ acc.tipos[td.tipo]=(acc.tipos[td.tipo]||0)+td.formulas; });
+  });
+  // Derivadas no sumables
+  if('samplesDia' in base.kpis) kpis.samplesDia = kpis.dias ? +(kpis.sampleOrders/kpis.dias).toFixed(2) : 0;
+  if('pctRobot' in base.kpis){ const tot=(kpis.manual||0)+(kpis.robot||0); kpis.pctRobot = tot ? +(kpis.robot/tot*100).toFixed(1) : 0; }
+  const srt = (o,f)=>Object.values(o).sort(f);
+  const out = {
+    kpis,
+    lab: srt(acc.lab,(a,b)=>b.lineas-a.lineas),
+    perfumers: srt(acc.perfumers,(a,b)=>b.formulas-a.formulas),
+    topIngredientes: srt(acc.topIngredientes,(a,b)=>b.lineas-a.lineas).slice(0,25),
+    lotes: srt(acc.lotes,(a,b)=>b.lineas-a.lineas).slice(0,80),
+    tiposDetalle: Object.entries(acc.tipos).map(([tipo,formulas])=>({tipo,formulas})).sort((a,b)=>b.formulas-a.formulas),
+  };
+  _aggCache[ckey] = out;
+  return out;
+}
+// Scope correspondiente al filtro global actual.
+function scopeActual(){
+  if(periodoEsAll()) return DATA.scopes.ALL;
+  // Un solo año completo, sin meses ni YTD → usar el scope precalculado directo (más rápido y exacto)
+  if(curYears.length===1 && !curMonths.length && !ytdGlobal && DATA.scopes[curYears[0]])
+    return DATA.scopes[curYears[0]];
+  const yms = mesesSeleccionados();
+  if(!yms.length) return DATA.scopes.ALL;
+  if(yms.length===1) return DATA.scopes[yms[0]] || DATA.scopes.ALL;
+  return aggScopes(yms);
+}
+
+// Serie para los graficos de evolucion. Si un solo año (sin multi): meses de ese año.
+// Si varios años o todos: una entrada por año (agregada). Respeta mes/YTD.
+function serieActual(){
+  const s = DATA.serieMensual || [];
+  const yms = new Set(mesesSeleccionados().length ? mesesSeleccionados() : s.map(m=>m.ym));
+  const sel = s.filter(m=>yms.has(m.ym));
+  const anios = aniosEfectivos();
+  // Un solo año elegido y sin meses concretos → desglose mensual de ese año
+  if(curYears.length===1 && !curMonths.length) return sel;
+  // Resto → agregar por año
+  const by = {};
+  sel.forEach(m=>{ const o = by[m.anio] || (by[m.anio]={label:m.anio,lineas:0,formulas:0,lab:0,robot:0,peso:0,
+      prodOrders:0,pours:0,sampleOrders:0,manual:0,robot:0,dias:0});
+    ['lineas','formulas','lab','robot','peso','prodOrders','pours','sampleOrders','manual','dias'].forEach(k=>{ if(m[k]!=null) o[k]+=m[k]; });
+  });
+  return Object.keys(by).sort().map(a=>by[a]);
+}
+// True si el proyecto p cae en el periodo actual.
+function enPeriodo(p){
+  if(periodoEsAll()) return true;
+  const yms = new Set(mesesSeleccionados());
+  return yms.has(p.ym);
+}
+function periodLabelText(){
+  const anios = curYears.length ? [...curYears].sort() : null;
+  let base;
+  if(!anios) base = t('periodo_all');
+  else if(anios.length===1) base = anios[0];
+  else base = anios.join(' + ');
+  if(curMonths.length){
+    const ms = [...curMonths].sort().map(mm=>mesLabel('2000-'+mm).slice(0,3)).join(' + ');
+    base = ms + (anios? ' · '+base : '');
+  }
+  if(ytdGlobal && !curMonths.length) base += ' · YTD';   // con meses concretos el YTD no aplica
+  return base;
+}
+// === Deep-linking: estado de la vista (centro/pestaña/año/mes/YTD) en el hash de la URL ===
+let _hashApplying = false;   // true mientras se reconstruye desde la URL (no reescribir)
+function readHash(){
+  const h = (location.hash||'').replace(/^#/,''); if(!h) return null;
+  const p = new URLSearchParams(h);
+  return { center:p.get('c'), tab:p.get('t'),
+    years: p.has('y') ? p.get('y').split(',').filter(Boolean) : null,
+    months: p.has('m') ? p.get('m').split(',').filter(Boolean) : null,
+    ytd: p.get('ytd') };
+}
+function writeHash(){
+  if(_hashApplying) return;
+  const p = new URLSearchParams();
+  if(CENTER) p.set('c', CENTER);
+  const tab = document.querySelector('#tabs .tab.active')?.dataset.page; if(tab) p.set('t', tab);
+  if(curYears.length) p.set('y', curYears.join(','));
+  if(curMonths.length) p.set('m', curMonths.join(','));
+  if(ytdGlobal) p.set('ytd','1');
+  const s = p.toString();
+  try{ history.replaceState(null,'', s ? '#'+s : location.pathname+location.search); }catch(e){}
+}
+function applyPeriod(){
+  document.getElementById('periodLabel').textContent = periodLabelText();
+  writeHash();
+}
+// Periodo por defecto al cargar / cambiar de centro: año vigente (el último) con YTD
+// activo, para aterrizar en "año en curso a fecha de hoy". Tendencias arranca comparando
+// ese año vs el anterior, recortados al mismo periodo (yoyYTD). Si el año vigente está
+// completo (12 meses), el YTD no recorta nada → equivale al año completo.
+function periodoPorDefecto(){
+  const an = DATA.anios || [];
+  curYears = an.length ? [an[an.length-1]] : [];
+  curMonths = [];
+  ytdGlobal = true;
+  yoyA = null; yoyB = null; yoyYTD = true;
+  applyPeriod();
+}
+function buildChips(){ buildYearChips(); buildMonthChips(); }
+// Selector de AÑO multi-marcable. "Todos" = ningún año marcado (curYears vacío).
+function buildYearChips(){
+  const wrap = document.getElementById('yearChips');
+  const anios = DATA.anios || [];
+  const todosActivo = curYears.length===0;
+  let html = `<button class="chip${todosActivo?' active':''}" data-y="ALL">${t('chip_all_years')}</button>` +
+    anios.map(a=>`<button class="chip${curYears.includes(a)?' active':''}" data-y="${a}">${a}</button>`).join('');
+  // Botón YTD (Year-To-Date): recorta al mes más reciente con datos
+  html += `<button class="chip ytd-chip${ytdGlobal?' active':''}" id="ytdChip" title="${t('ytd_title')}">${t('ytd_btn')}</button>`;
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.chip[data-y]').forEach(c=>c.onclick=()=>{
+    const y = c.dataset.y;
+    if(y==='ALL'){ curYears = []; curMonths = []; }   // sin años no hay contexto de mes
+    else {
+      const i = curYears.indexOf(y);
+      if(i>=0) curYears.splice(i,1); else curYears.push(y);
+      if(!curYears.length) curMonths = [];
+    }
+    buildYearChips(); buildMonthChips(); applyPeriod(); render();
+  });
+  document.getElementById('ytdChip').onclick=()=>{
+    ytdGlobal = !ytdGlobal;
+    buildYearChips(); applyPeriod(); render();
+  };
+}
+// Selector de MES multi-marcable. Con uno o varios años, los meses filtran en TODOS ellos.
+// "Todo el año" = ningún mes marcado (curMonths vacío). Solo se oculta con "Todos los años".
+function buildMonthChips(){
+  const wrap = document.getElementById('monthChips');
+  if(curYears.length===0){ wrap.innerHTML = ''; return; }
+  // Meses disponibles = unión de los meses presentes en los años seleccionados
+  const setM = new Set();
+  (DATA.meses||[]).forEach(m=>{ if(curYears.includes(m.anio)) setM.add(m.ym.slice(5)); });
+  const mm = [...setM].sort();
+  const todoActivo = curMonths.length===0;
+  wrap.innerHTML = `<button class="chip${todoActivo?' active':''}" data-m="ALL">${t('chip_all_months')}</button>` +
+    mm.map(x=>`<button class="chip${curMonths.includes(x)?' active':''}" data-m="${x}">${mesLabel('2000-'+x)}</button>`).join('');
+  wrap.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    const m = c.dataset.m;
+    if(m==='ALL'){ curMonths = []; }
+    else { const i = curMonths.indexOf(m); if(i>=0) curMonths.splice(i,1); else curMonths.push(m); }
+    buildMonthChips(); applyPeriod(); render();
+  });
+}
+
+// Pestañas que NO usan el filtro global Año/Mes (tienen su propia lógica o no aplican)
+const PAGES_SIN_FILTRO = new Set(['tendencias', 'interanual', 'materias', 'comparativa']);
+function syncFilterbar(page){
+  const off = PAGES_SIN_FILTRO.has(page);
+  document.getElementById('filterbar').style.display = off ? 'none' : 'flex';
+  // El rótulo "Periodo · N líneas" del header también depende del filtro global:
+  // se oculta donde el filtro no aplica para no mostrar un periodo contradictorio.
+  document.getElementById('periodWrap').style.visibility = off ? 'hidden' : 'visible';
+}
+// Muestra/oculta pestañas según el modelo del centro activo. Si la pestaña activa
+// deja de aplicar, salta a la primera visible.
+function syncTabs(){
+  const modelo = modeloActual();
+  const nCentros = Object.keys(DATASETS).length;
+  const tabs = [...document.querySelectorAll('#tabs .tab')];
+  tabs.forEach(tb=>{
+    const modelos = (tb.dataset.modelos||'').split(',');
+    const needs = parseInt(tb.dataset.needsCenters||'0', 10);
+    tb.style.display = (modelos.includes(modelo) && nCentros >= (needs||1)) ? '' : 'none';
+  });
+  const activa = document.querySelector('.tab.active');
+  if(!activa || activa.style.display==='none'){
+    const primera = tabs.find(tb=>tb.style.display!=='none');
+    if(primera) activateTab(primera.dataset.page);
+  }
+}
+function activateTab(page){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.dataset.page===page));
+  document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active', x.id==='page-'+page));
+  syncFilterbar(page);
+  resizeCharts();
+  writeHash();
+}
+document.getElementById('tabs').querySelectorAll('.tab').forEach(t=>t.onclick=()=>activateTab(t.dataset.page));
+// Chart.js inicializa con tamaño 0 los canvas de páginas ocultas: forzar resize al mostrarlas.
+// Doble rAF (espera a que el layout y la animación de fade apliquen el ancho real) + respaldo diferido.
+function resizeCharts(){
+  const go = ()=>Object.values(charts).forEach(c=>{ try{ c.resize(); }catch(e){} });
+  requestAnimationFrame(()=>requestAnimationFrame(go));
+  setTimeout(go, 360);
+}
+
+// === Tema claro / oscuro ===
+function syncChartDefaults(){
+  if(typeof Chart !== 'undefined'){
+    Chart.defaults.color = C.ink2;
+    Chart.defaults.font.family = "'Spline Sans Mono', monospace";
+    Chart.defaults.font.size = 11;
+  }
+}
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  try{ localStorage.setItem('seneca-theme', theme); }catch(e){}
+  C = readColors();          // recargar colores del nuevo tema
+  syncChartDefaults();
+  if(DATA) render();         // re-dibujar gráficos con los colores nuevos
+}
+(function initTheme(){
+  let saved;
+  try{ saved = localStorage.getItem('seneca-theme'); }catch(e){}
+  if(!saved){
+    saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  }
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+document.getElementById('themeToggle').onclick = () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+};
+
+// === Exportar la página activa a PDF (html2canvas + jsPDF, cargados bajo demanda) ===
+function cargarScript(src, ready){
+  if(ready()) return Promise.resolve();
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=src;
+    s.onload=()=>res(); s.onerror=()=>rej(new Error('No se pudo cargar '+src));
+    document.head.appendChild(s);
+  });
+}
+async function exportarPDF(){
+  const btn=document.getElementById('exportBtn');
+  const page=document.querySelector('.page.active'); if(!page) return;
+  const prev=btn.style.opacity; btn.style.opacity='0.4'; btn.style.pointerEvents='none';
+  try{
+    await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', ()=>window.html2canvas);
+    await cargarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', ()=>window.jspdf);
+    const bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#ffffff';
+    const canvas=await window.html2canvas(page,{backgroundColor:bg, scale:2, useCORS:true, logging:false});
+    const tab=document.querySelector('#tabs .tab.active')?.dataset.page||'vista';
+    const fecha=new Date().toISOString().slice(0,10);
+    // JPEG (no PNG) para que el PDF pese poco; el fondo es opaco, no hay transparencia.
+    const img=canvas.toDataURL('image/jpeg',0.92);
+    const { jsPDF }=window.jspdf;
+    const pdf=new jsPDF('p','pt','a4');
+    const pw=pdf.internal.pageSize.getWidth();
+    const ph=pdf.internal.pageSize.getHeight();
+    // Ajustamos la imagen al ancho A4 y la repartimos en páginas si es más alta que una.
+    const imgW=pw;
+    const imgH=canvas.height*pw/canvas.width;
+    let posY=0, restante=imgH;
+    pdf.addImage(img,'JPEG',0,posY,imgW,imgH);
+    restante-=ph;
+    while(restante>0){
+      posY-=ph;
+      pdf.addPage();
+      pdf.addImage(img,'JPEG',0,posY,imgW,imgH);
+      restante-=ph;
+    }
+    pdf.save(`dory-${CENTER}-${tab}-${fecha}.pdf`);
+  }catch(e){ console.warn('Export PDF falló:', e.message); alert(t('export_err')); }
+  finally{ btn.style.opacity=prev; btn.style.pointerEvents=''; }
+}
+document.getElementById('exportBtn').onclick = exportarPDF;
+
+// === Carga de datos ===
+async function init(){
+  if(typeof Chart === 'undefined'){
+    showError(t('err_chart'));
+    return;
+  }
+  C = readColors();
+  syncChartDefaults();
+  try{
+    // Cargar todos los centros en paralelo; los que fallen se omiten (no rompen el resto)
+    await Promise.all(CENTROS.map(async c=>{
+      try{
+        const res = await fetch(c.src + '?v=' + Date.now());
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        if(json.scopes && json.scopes.ALL) DATASETS[c.id] = json;
+      }catch(e){ console.warn('No se pudo cargar el centro', c.id, e.message); }
+    }));
+    if(!Object.keys(DATASETS).length)
+      throw new Error('No se pudo cargar ningún centro. Revisa que data/data.json esté servido por HTTP.');
+
+    // Centro inicial: URL (deep-link) > localStorage > primero cargado
+    const hs = readHash();
+    let saved; try{ saved = localStorage.getItem('dory-center'); }catch(e){}
+    CENTER = (hs && hs.center && DATASETS[hs.center]) ? hs.center
+           : (saved && DATASETS[saved]) ? saved
+           : (DATASETS.seneca ? 'seneca' : Object.keys(DATASETS)[0]);
+    DATA = DATASETS[CENTER];
+
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('tabs').style.display = 'flex';
+    _hashApplying = true;
+    if(hs && (hs.years || hs.months || hs.ytd!=null)){
+      // Reconstruir el filtro exacto desde la URL (sin tocar el hash mientras tanto)
+      curYears = (hs.years||[]).filter(y=>(DATA.anios||[]).includes(y));
+      curMonths = curYears.length ? (hs.months||[]) : [];
+      ytdGlobal = hs.ytd==='1';
+      yoyA=null; yoyB=null; yoyYTD=ytdGlobal;
+      applyPeriod();
+    } else {
+      periodoPorDefecto();        // año vigente + YTD como vista inicial
+    }
+    buildCenterSwitch();
+    applyCenterChrome();          // logo, subtítulo, integridad, periodo
+    syncTabs();
+    buildChips();
+    render();
+    // Pestaña del deep-link (si es válida y visible para el centro)
+    if(hs && hs.tab){
+      const tb = document.querySelector(`#tabs .tab[data-page="${hs.tab}"]`);
+      if(tb && getComputedStyle(tb).display!=='none') activateTab(hs.tab);
+    }
+    _hashApplying = false;
+    writeHash();
+  }catch(err){
+    showError(err.message);
+    console.error(err);
+  }
+}
+
+// Aplica los elementos de cabecera que dependen del centro activo
+function applyCenterChrome(){
+  const ci = centroInfo();
+  document.getElementById('brandLogo').textContent = ci.label.charAt(0);
+  document.getElementById('brandSub').textContent = `${ci.label} · ${ci.sub}`;
+  document.getElementById('brandSub').removeAttribute('data-i18n');  // ya no lo controla i18n
+  syncFilterbar(document.querySelector('.tab.active')?.dataset.page || 'resumen');
+  document.getElementById('periodLabel').textContent = periodLabelText();
+  if(DATA.generado) document.getElementById('genLabel').textContent = t('actualizado') + ' ' + DATA.generado.replace('T',' ');
+  renderIntegrity();
+}
+
+// === Selector de centro ===
+function buildCenterSwitch(){
+  const ids = Object.keys(DATASETS);
+  const sw = document.getElementById('centerSwitch');
+  if(ids.length < 2){ sw.style.display = 'none'; return; }   // un solo centro: sin selector
+  sw.style.display = 'flex';
+  sw.innerHTML = CENTROS.filter(c=>DATASETS[c.id])
+    .map(c=>`<button data-center="${c.id}"${c.id===CENTER?' class="active"':''}>${c.label}</button>`).join('');
+  sw.querySelectorAll('button').forEach(b=>b.onclick=()=>setCenter(b.dataset.center));
+}
+function setCenter(id){
+  if(!DATASETS[id]) return;
+  CENTER = id; DATA = DATASETS[id];
+  try{ localStorage.setItem('dory-center', id); }catch(e){}
+  // Al cambiar de centro, volver a la vista por defecto (año vigente + YTD)
+  curMonths=[];
+  periodoPorDefecto();
+  buildCenterSwitch();
+  applyCenterChrome();
+  syncTabs();
+  buildChips();
+  render();
+  writeHash();
+}
+// Indicador de integridad (reutilizable: se repinta al cambiar de idioma)
+function renderIntegrity(){
+  const ig = DATA && DATA.integridad;
+  if(!ig) return;
+  const el = document.getElementById('integrity');
+  el.style.display = 'flex';
+  el.className = 'integrity ' + (ig.ok ? 'ok' : 'warn');
+  const resumen = `${ig.archivos} ${ig.archivos===1?t('file'):t('files')} · ${fmt(ig.filas)} ${t('lines')}`;
+  let detalle = `<b>${t('integr_title')}</b><br>${resumen}<br>`;
+  if(ig.ok && !(ig.info && ig.info.length)) detalle += t('integr_ok');
+  else detalle += (ig.alertas||[]).map(a=>`<span class="al">⚠ ${a}</span>`).join('');
+  if(ig.info && ig.info.length) detalle += ig.info.map(i=>`<span class="info">✓ ${i}</span>`).join('');
+  el.innerHTML = `<span class="dot"></span><span class="txt">${ig.ok ? resumen+' · '+t('integr_sindup') : ig.alertas.length+' '+t('integr_avisos')}</span><div class="detail">${detalle}</div>`;
+}
+
+// === Selector de idioma (ES / EN / FR) ===
+function setLang(lang){
+  if(!I18N[lang]) lang = 'es';
+  LANG = lang;
+  try{ localStorage.setItem('seneca-lang', lang); }catch(e){}
+  document.querySelectorAll('#langSwitch button').forEach(b=>b.classList.toggle('active', b.dataset.lang===lang));
+  applyI18n();                       // textos estáticos del HTML
+  if(DATA){                          // textos dinámicos (KPIs, tablas, gráficos)
+    document.getElementById('periodLabel').textContent = periodLabelText();
+    if(DATA.generado) document.getElementById('genLabel').textContent = t('actualizado')+' '+DATA.generado.replace('T',' ');
+    renderIntegrity();
+    buildChips();
+    render();
+    syncFilterbar(document.querySelector('.tab.active')?.dataset.page || 'resumen');
+  }
+}
+document.getElementById('langSwitch').querySelectorAll('button').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+(function initLang(){
+  let saved; try{ saved = localStorage.getItem('seneca-lang'); }catch(e){}
+  if(!saved){ const nav=(navigator.language||'es').slice(0,2); saved=['es','en','fr'].includes(nav)?nav:'es'; }
+  setLang(saved);                    // fija LANG y traduce los estáticos antes de cargar datos
+})();
+
+init();
+</script>
+</body>
+</html>

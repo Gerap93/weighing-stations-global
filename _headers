@@ -1,0 +1,10 @@
+# Los JSON de datos no deben quedar cacheados: así, al reemplazar los CSV
+# y regenerar data.json, el dashboard muestra los datos nuevos al instante.
+/data/data.json
+  Cache-Control: no-cache, must-revalidate
+/location/*/data.json
+  Cache-Control: no-cache, must-revalidate
+
+# El resto de assets sí pueden cachearse un poco.
+/*
+  X-Content-Type-Options: nosniff

@@ -1,0 +1,9 @@
+# Datos crudos del laboratorio (Dory/Contexa): NO versionar.
+# El dashboard solo necesita data/data.json, que se regenera con:
+#   python build_data.py
+# Las carpetas location/<centro>/ se mantienen en el repo vía sus .gitkeep
+location/*/*.csv
+location/*/*.xlsx
+
+# macOS
+.DS_Store
