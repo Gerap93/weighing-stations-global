@@ -5,5 +5,9 @@
 location/*/*.csv
 location/*/*.xlsx
 
+# Python (los parsers generan bytecode al ejecutarse)
+__pycache__/
+*.pyc
+
 # macOS
 .DS_Store
