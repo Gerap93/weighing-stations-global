@@ -95,8 +95,9 @@ def cargar_filas():
                 cod = (r.get(COLS['cod']) or '').strip()
                 nom = (r.get(COLS['nom']) or '').strip()
                 resp_ing = (r.get(COLS['ingrResp']) or '').strip()
+                form_resp = (r.get(COLS['formResp']) or '').strip()
                 es_bxs, es_base, es_trial, es_completa, tipo_det, tipo_linea = \
-                    B.clasificar(cod, nom, resp_ing)
+                    B.clasificar(cod, nom, resp_ing, form_resp)
                 fin = B.parse_date(r.get(COLS['finProd']))
                 rows.append({
                     'archivo': name,
@@ -106,7 +107,7 @@ def cargar_filas():
                     'nombreIngrediente': (r.get(COLS['nomIngr']) or '').strip(),
                     'pesoIngr': num_sgp(r.get(COLS['pesoIngr'])),
                     'lote': (r.get(COLS['lote']) or '').strip(),
-                    'formulaResp': (r.get(COLS['formResp']) or '').strip(),
+                    'formulaResp': form_resp,
                     'ingredientResp': resp_ing,
                     'finProd': fin,
                     'finProdRaw': (r.get(COLS['finProd']) or '').strip(),

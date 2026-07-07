@@ -126,9 +126,10 @@ h1{font-size:17px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
 
 main{padding:18px 32px 0;max-width:1500px;margin:0 auto}
 /* Barra de control propia de una página (p. ej. selector de años en Tendencias) — arriba, como los filtros */
-.page-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+.page-controls{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;
   background:var(--panel);border:1px solid var(--line);border-radius:12px;
   padding:12px 16px;margin-bottom:16px;box-shadow:var(--shadow)}
+.page-controls .fgroup{display:flex;align-items:center;gap:8px}
 /* Comparativa: filtros en DOS filas fijas (período arriba, tipos abajo). Sin scroll;
    si los años llegaran a no caber, bajan de línea dentro de su propia fila. */
 .cmp-controls{flex-direction:column;align-items:stretch;gap:10px}
@@ -148,6 +149,8 @@ main{padding:18px 32px 0;max-width:1500px;margin:0 auto}
 .card.c2::before{background:var(--accent2)}
 .card.c3::before{background:var(--warn)}
 .card.c4::before{background:var(--pink)}
+/* Ficha atenuada: métrica que no aplica al filtro de Tipo de pesaje activo */
+.card.dim{opacity:.4;transition:opacity .2s}
 .kpi-l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);font-weight:600;margin-bottom:8px}
 .kpi-v{font-size:32px;font-weight:800;letter-spacing:-.03em;font-family:'Spline Sans Mono',monospace;line-height:1}
 .kpi-s{font-size:12px;color:var(--ink2);margin-top:6px}
@@ -389,6 +392,12 @@ footer{text-align:center;color:var(--ink3);font-size:11px;margin-top:40px;paddin
     </div>
     <!-- Resumen modelo "samples" (Granollers) -->
     <div id="resumenSamples" style="display:none">
+      <!-- Filtros a nivel de página: aplican a las fichas y a todos los gráficos de pesaje -->
+      <div class="page-controls" id="samplesFilters">
+        <div class="fgroup"><span class="flabel" data-i18n="filter_tipo">Tipo de pesaje</span><div id="weighTipoChips" class="minichips"></div></div>
+        <div class="fgroup"><span class="flabel" data-i18n="filter_pesaje">Pesaje</span><div id="estTipoChips" class="minichips"></div></div>
+        <div class="fgroup"><span class="flabel" data-i18n="filter_estacion">Estación</span><div id="estSelChips" class="minichips"></div></div>
+      </div>
       <div class="grid kpis" id="kpisSamples"></div>
       <div class="grid row2">
         <div class="panel">
@@ -406,12 +415,6 @@ footer{text-align:center;color:var(--ink3);font-size:11px;margin-top:40px;paddin
         </div>
       </div>
       <div class="cmp-divider"><span class="cmp-divider-label" data-i18n="gra_pesaje_section">Pesaje y estaciones</span></div>
-      <div class="trend-tools" style="margin-bottom:14px;gap:10px 16px">
-        <span class="flabel" data-i18n="filter_tipo">Tipo de pesaje</span>
-        <div id="weighTipoChips" class="minichips"></div>
-        <span class="flabel" data-i18n="filter_estacion">Estación</span>
-        <div id="estSelChips" class="minichips"></div>
-      </div>
       <div class="panel" id="estEvolPanel" style="display:none;margin-bottom:16px">
         <h3 id="estEvolTitle">·</h3>
         <div class="chartbox tall"><canvas id="chEstEvol"></canvas></div>
@@ -420,10 +423,6 @@ footer{text-align:center;color:var(--ink3);font-size:11px;margin-top:40px;paddin
       <div class="grid row2">
         <div class="panel">
           <h3 data-i18n="panel_gra_mr">Pesaje manual vs robot</h3>
-          <div class="trend-tools">
-            <span class="flabel" data-i18n="granularity">Detalle</span>
-            <div id="mrGranChips" class="minichips"></div>
-          </div>
           <div class="chartbox tall"><canvas id="chGraMR"></canvas></div>
           <div class="note" data-i18n="note_gra_mr">Nº de pesadas: estaciones manuales (MWS) vs robot (ROXY). Fuente: Exportación MANUAL.</div>
         </div>
@@ -434,25 +433,30 @@ footer{text-align:center;color:var(--ink3);font-size:11px;margin-top:40px;paddin
         </div>
       </div>
 
-      <div class="cmp-divider"><span class="cmp-divider-label" data-i18n="gra_est_section">Detalle por estación manual (MWS)</span></div>
-      <div class="grid row2">
-        <div class="panel">
-          <h3 data-i18n="panel_est_pesadas">Pesadas por estación manual</h3>
-          <div class="chartbox tall"><canvas id="chEstPesadas"></canvas></div>
+      <div id="estManualSection">
+        <div class="cmp-divider"><span class="cmp-divider-label" data-i18n="gra_est_section">Detalle por estación manual (MWS)</span></div>
+        <div class="grid row2">
+          <div class="panel">
+            <h3 data-i18n="panel_est_pesadas">Pesadas por estación manual</h3>
+            <div class="chartbox tall"><canvas id="chEstPesadas"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3 data-i18n="panel_est_ordbar">Órdenes de muestra por estación</h3>
+            <div class="chartbox tall"><canvas id="chEstOrdenesBar"></canvas></div>
+            <div class="note" data-i18n="note_est_ordbar">Órdenes de muestra distintas atendidas por cada técnico en el periodo seleccionado.</div>
+          </div>
         </div>
-        <div class="panel">
-          <h3 data-i18n="panel_est_peso">Peso dosificado por estación manual (g)</h3>
-          <div class="chartbox tall"><canvas id="chEstPeso"></canvas></div>
+        <div class="grid row2" style="margin-top:16px">
+          <div class="panel">
+            <h3 data-i18n="panel_est_peso">Peso dosificado por estación manual (g)</h3>
+            <div class="chartbox tall"><canvas id="chEstPeso"></canvas></div>
+          </div>
+          <div class="panel">
+            <h3 data-i18n="panel_est_ordevol">Órdenes de muestra por estación · evolución</h3>
+            <div class="chartbox tall"><canvas id="chEstOrdenes"></canvas></div>
+            <div class="note" data-i18n="note_est_ordenes">Órdenes de muestra distintas atendidas por cada técnico. Se muestra por día al seleccionar un mes concreto; en caso contrario, mensual.</div>
+          </div>
         </div>
-      </div>
-      <div class="panel" style="margin-top:16px">
-        <h3 data-i18n="panel_est_ordenes">Órdenes de muestra por estación manual</h3>
-        <div class="trend-tools">
-          <span class="flabel" data-i18n="granularity">Detalle</span>
-          <div id="estOrdGranChips" class="minichips"></div>
-        </div>
-        <div class="chartbox tall"><canvas id="chEstOrdenes"></canvas></div>
-        <div class="note" data-i18n="note_est_ordenes">Órdenes de muestra distintas atendidas por cada técnico. Mensual o diario (diario filtra por el periodo elegido).</div>
       </div>
     </div>
   </section>
@@ -707,7 +711,9 @@ const I18N = {
     granularity:`Detalle`, gran_mes:`Mes`, gran_dia:`Día`,
     gra_est_section:`Detalle por estación manual (MWS)`,
     panel_est_pesadas:`Pesadas por estación manual`, panel_est_peso:`Peso dosificado por estación manual (g)`,
-    panel_est_ordenes:`Órdenes de muestra por estación manual`, note_est_ordenes:`Órdenes de muestra distintas atendidas por cada técnico. Mensual, o diario (el diario requiere elegir un año o mes en el filtro).`,
+    panel_est_ordenes:`Órdenes de muestra por estación manual`, note_est_ordenes:`Órdenes de muestra distintas atendidas por cada técnico. Se muestra por día al seleccionar un mes concreto; en caso contrario, mensual.`,
+    panel_est_ordbar:`Órdenes de muestra por estación`, note_est_ordbar:`Órdenes de muestra distintas atendidas por cada técnico en el periodo seleccionado.`, panel_est_ordevol:`Órdenes de muestra por estación · evolución`,
+    estt_ambas:`Ambas`, sub_pesadas:`pesadas totales`, kpi_pesrobot:`Pesadas robot`, kpi_pesmanual:`Pesadas manual`,
     panel_gra_mr:`Pesaje manual vs robot`, note_gra_mr:`Nº de pesadas: estaciones manuales (MWS) vs robot (ROXY). Fuente: Exportación MANUAL.`,
     panel_gra_estaciones:`Carga por estación de pesaje`, note_gra_estaciones:`Pesadas por puesto en el periodo seleccionado: robots (ROXY) + estaciones manuales (MWS).`,
     gra_pesaje_section:`Pesaje y estaciones`, filter_tipo:`Tipo de pesaje`, filter_estacion:`Estación`, est_all:`Todas`,
@@ -775,7 +781,9 @@ const I18N = {
     granularity:`Detail`, gran_mes:`Month`, gran_dia:`Day`,
     gra_est_section:`Manual station detail (MWS)`,
     panel_est_pesadas:`Weighings per manual station`, panel_est_peso:`Dosed weight per manual station (g)`,
-    panel_est_ordenes:`Sample orders per manual station`, note_est_ordenes:`Distinct sample orders handled by each technician. Monthly, or daily (daily requires picking a year or month in the filter).`,
+    panel_est_ordenes:`Sample orders per manual station`, note_est_ordenes:`Distinct sample orders handled by each technician. Shown daily when a single month is selected; otherwise monthly.`,
+    panel_est_ordbar:`Sample orders per station`, note_est_ordbar:`Distinct sample orders handled by each technician in the selected period.`, panel_est_ordevol:`Sample orders per station · trend`,
+    estt_ambas:`Both`, sub_pesadas:`total weighings`, kpi_pesrobot:`Robot weighings`, kpi_pesmanual:`Manual weighings`,
     panel_gra_mr:`Manual vs robot weighing`, note_gra_mr:`Number of weighings: manual stations (MWS) vs robot (ROXY). Source: Exportación MANUAL.`,
     panel_gra_estaciones:`Workload per weighing station`, note_gra_estaciones:`Weighings per station in the selected period: robots (ROXY) + manual stations (MWS).`,
     gra_pesaje_section:`Weighing & stations`, filter_tipo:`Weighing type`, filter_estacion:`Station`, est_all:`All`,
@@ -843,7 +851,9 @@ const I18N = {
     granularity:`Détail`, gran_mes:`Mois`, gran_dia:`Jour`,
     gra_est_section:`Détail par poste manuel (MWS)`,
     panel_est_pesadas:`Pesées par poste manuel`, panel_est_peso:`Poids dosé par poste manuel (g)`,
-    panel_est_ordenes:`Ordres d'échantillon par poste manuel`, note_est_ordenes:`Ordres d'échantillon distincts traités par chaque technicien. Mensuel, ou journalier (le journalier nécessite de choisir une année ou un mois dans le filtre).`,
+    panel_est_ordenes:`Ordres d'échantillon par poste manuel`, note_est_ordenes:`Ordres d'échantillon distincts traités par chaque technicien. Affichage journalier lorsqu'un mois précis est sélectionné ; sinon mensuel.`,
+    panel_est_ordbar:`Ordres d'échantillon par poste`, note_est_ordbar:`Ordres d'échantillon distincts traités par chaque technicien sur la période sélectionnée.`, panel_est_ordevol:`Ordres d'échantillon par poste · évolution`,
+    estt_ambas:`Les deux`, sub_pesadas:`pesées totales`, kpi_pesrobot:`Pesées robot`, kpi_pesmanual:`Pesées manuelles`,
     panel_gra_mr:`Pesée manuelle vs robot`, note_gra_mr:`Nombre de pesées : postes manuels (MWS) vs robot (ROXY). Source : Exportación MANUAL.`,
     panel_gra_estaciones:`Charge par poste de pesée`, note_gra_estaciones:`Pesées par poste sur la période sélectionnée : robots (ROXY) + postes manuels (MWS).`,
     gra_pesaje_section:`Pesée et postes`, filter_tipo:`Type de pesée`, filter_estacion:`Poste`, est_all:`Tous`,
@@ -1159,9 +1169,16 @@ const SAMPLE_METRICS = [['sampleOrders','m_sampleorders'],['prodOrders','m_prodo
                         ['manual','ds_manual'],['robot','ds_robot']];
 let graMetric = 'sampleOrders';
 // Filtros del pesaje (bloque C): tipo Producción/Muestra/Ambos y subconjunto de estaciones
-let weighTipo = 'ambos';            // 'ambos' | 'prod' | 'muestra'
+let weighTipo = 'ambos';            // 'ambos' | 'prod' | 'muestra'  (Tipo de pesaje)
+let estTipo = 'ambas';              // 'ambas' | 'manual' | 'robot'   (Pesaje: tipo de estación)
 let estSel = [];                    // estaciones marcadas; [] = todas
 const WEIGH_TIPOS = [['ambos','tipo_ambos'],['prod','tipo_prod'],['muestra','tipo_muestra']];
+const EST_TIPOS   = [['ambas','estt_ambas'],['manual','ds_manual'],['robot','ds_robot']];
+// Tipo ('manual'|'robot') de una estación a partir de su módulo.
+function tipoEstacion(mod){ return (DATA.estManual&&(DATA.estManual.modulos||[]).includes(mod)) ? 'manual' : 'robot'; }
+// Granularidad automática: diaria solo si el periodo activo es un único mes de un único año
+// (y existe serie diaria); en cualquier otro caso, mensual. Sustituye a los toggles Mes/Día.
+function granAuto(){ return (curYears.length===1 && curMonths.length===1 && (DATA.serieDiaria||[]).length) ? 'dia' : 'mes'; }
 // Valor según el tipo activo: muestra = sample; producción = total − sample; ambos = total.
 function valTipo(total, sample){
   total=total||0; sample=sample||0;
@@ -1179,17 +1196,7 @@ function renderSamples(){
   document.getElementById('rowcount').textContent = fmt(k.sampleOrders);
   renderInsightBand(k);
 
-  // KPIs (incluye % de automatización si hay datos de pesaje manual/robot)
-  let kpis =
-    kpiCard(t('kpi_sampleorders'), fmt(k.sampleOrders), t('sub_muestras'),'',kpiDelta('sampleOrders',k.sampleOrders)) +
-    kpiCard(t('kpi_prodorders'), fmt(k.prodOrders), t('sub_ordenes'),'c2',kpiDelta('prodOrders',k.prodOrders)) +
-    kpiCard(t('kpi_pours'), fmt(k.pours), t('sub_pours'),'c3',kpiDelta('pours',k.pours)) +
-    kpiCard(t('kpi_samplesdia'), fmt1(k.samplesDia), t('sub_pordia'),'c4',kpiDelta('samplesDia',k.samplesDia));
-  if(k.pctRobot!=null)
-    kpis += kpiCard(t('kpi_pctrobot'), k.pctRobot+'%', `${fmt(k.robot)} ${t('sub_robot')} · ${fmt(k.manual)} ${t('sub_manual')}`,'c2');
-  else
-    kpis += kpiCard(t('kpi_dias'), fmt(k.dias), t('sub_laborables'),'c2');
-  document.getElementById('kpisSamples').innerHTML = kpis;
+  renderSampleKpis();
 
   renderGraEvol();
   renderGraProdSample();
@@ -1204,28 +1211,70 @@ function renderSamples(){
   renderComparativa();
 }
 
-// Chips de Tipo de pesaje y de Estación; refrescan solo los gráficos de pesaje.
+// Fichas KPI (orden: Órdenes de muestra · Muestras/día · Órdenes de producción · Pours · Automatización).
+// Tipo de pesaje atenúa la métrica que no aplica; Pesaje (manual/robot) reconfigura la ficha de Automatización.
+function renderSampleKpis(){
+  const k = scopeActual().kpis;
+  const dimS = weighTipo==='prod' ? ' dim' : '';      // filtro Producción → muestra atenuada
+  const dimP = weighTipo==='muestra' ? ' dim' : '';   // filtro Muestra → producción atenuada
+  let kpis =
+    kpiCard(t('kpi_sampleorders'), fmt(k.sampleOrders), t('sub_muestras'), dimS.trim(), kpiDelta('sampleOrders',k.sampleOrders)) +
+    kpiCard(t('kpi_samplesdia'), fmt1(k.samplesDia), t('sub_pordia'), 'c4'+dimS, kpiDelta('samplesDia',k.samplesDia)) +
+    kpiCard(t('kpi_prodorders'), fmt(k.prodOrders), t('sub_ordenes'), 'c2'+dimP, kpiDelta('prodOrders',k.prodOrders)) +
+    kpiCard(t('kpi_pours'), fmt(k.pours), t('sub_pours'), 'c3'+dimP, kpiDelta('pours',k.pours));
+  if(k.pctRobot!=null){
+    if(estTipo==='robot')       kpis += kpiCard(t('kpi_pesrobot'),  fmt(k.robot),  t('sub_pesadas'), 'c2');
+    else if(estTipo==='manual') kpis += kpiCard(t('kpi_pesmanual'), fmt(k.manual), t('sub_pesadas'), 'c2');
+    else kpis += kpiCard(t('kpi_pctrobot'), k.pctRobot+'%', `${fmt(k.robot)} ${t('sub_robot')} · ${fmt(k.manual)} ${t('sub_manual')}`,'c2');
+  } else {
+    kpis += kpiCard(t('kpi_dias'), fmt(k.dias), t('sub_laborables'),'c2');
+  }
+  document.getElementById('kpisSamples').innerHTML = kpis;
+}
+// Aplica los filtros de página: fichas (atenuado + Automatización) + gráficos de pesaje + estado de los chips.
+function applySampleFilters(){
+  renderSampleKpis();
+  renderPesajeControls();
+  renderSamplesPesaje();
+}
+// Chips de página: Tipo de pesaje · Pesaje (manual/robot) · Estación. Aplican a toda la página de samples.
 function renderPesajeControls(){
   const tc = document.getElementById('weighTipoChips');
   tc.innerHTML = WEIGH_TIPOS.map(([key,lbl])=>`<button class="minichip${key===weighTipo?' active':''}" data-t="${key}">${t(lbl)}</button>`).join('');
-  tc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ weighTipo=c.dataset.t; renderPesajeControls(); renderSamplesPesaje(); });
+  tc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ weighTipo=c.dataset.t; applySampleFilters(); });
+  // Pesaje: Ambas / Manual / Robot
+  const pc = document.getElementById('estTipoChips');
+  pc.innerHTML = EST_TIPOS.map(([key,lbl])=>`<button class="minichip${key===estTipo?' active':''}" data-p="${key}">${t(lbl)}</button>`).join('');
+  pc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{
+    estTipo=c.dataset.p;
+    if(estTipo!=='ambas') estSel = estSel.filter(m=>tipoEstacion(m)===estTipo);  // descarta estaciones que ya no aplican
+    applySampleFilters();
+  });
+  // Estación: lista acotada al tipo de pesaje activo
   const sc = document.getElementById('estSelChips');
-  const ests = DATA.estaciones||[];
+  const ests = (DATA.estaciones||[]).filter(e=> estTipo==='ambas' || e.tipo===estTipo);
   sc.innerHTML = `<button class="minichip${estSel.length===0?' active':''}" data-e="ALL">${t('est_all')}</button>` +
     ests.map(e=>`<button class="minichip${estSel.includes(e.modulo)?' active':''}" data-e="${e.modulo}">${(e.etiqueta||e.modulo).replace(/ \(.*\)/,'')}</button>`).join('');
   sc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{
     const e=c.dataset.e;
     if(e==='ALL') estSel=[]; else { const i=estSel.indexOf(e); if(i>=0) estSel.splice(i,1); else estSel.push(e); }
-    renderPesajeControls(); renderSamplesPesaje();
+    applySampleFilters();
   });
 }
-// Re-render de solo los gráficos afectados por Tipo/Estación (sin recalcular KPIs ni órdenes/pours).
+// Re-render de los gráficos de pesaje afectados por los filtros de página.
 function renderSamplesPesaje(){
   renderGraMR();
   renderGraEstaciones();
-  renderEstPesadas();
-  renderEstPeso();
-  renderEstOrdenes();
+  // "Detalle por estación manual (MWS)": se oculta cuando el filtro Pesaje está en Robot (no hay datos de técnico).
+  const showManual = estTipo!=='robot' && !!DATA.estManual;
+  const sec = document.getElementById('estManualSection');
+  if(sec) sec.style.display = showManual ? '' : 'none';
+  if(showManual){
+    renderEstPesadas();
+    renderEstOrdenesBar();
+    renderEstPeso();
+    renderEstOrdenes();
+  }
   renderEstEvol();
 }
 
@@ -1302,38 +1351,30 @@ function renderGraProdSample(){
   });
 }
 
-// Pesaje manual (MWS) vs robot (ROXY): barras apiladas. Toggle Mes/Día.
-let mrGran = 'mes';   // 'mes' | 'dia'
+// Pesaje manual (MWS) vs robot (ROXY): barras apiladas. Granularidad automática y filtro Pesaje.
 function renderGraMR(){
-  // Chips de granularidad (Día solo si hay serie diaria)
-  const hayDia = (DATA.serieDiaria||[]).length>0;
-  const grans = hayDia ? [['mes','gran_mes'],['dia','gran_dia']] : [['mes','gran_mes']];
-  if(!hayDia) mrGran='mes';
-  const gc = document.getElementById('mrGranChips');
-  gc.innerHTML = grans.map(([k,lbl])=>`<button class="minichip${k===mrGran?' active':''}" data-g="${k}">${t(lbl)}</button>`).join('');
-  gc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ mrGran=c.dataset.g; renderGraMR(); });
-
+  const gran = granAuto();
   let serie, labels;
-  if(mrGran==='dia'){
-    // Diario, filtrado por el periodo activo (año/mes) para no saturar el eje
+  if(gran==='dia'){
+    // Diario, filtrado por el periodo activo (un único mes) para no saturar el eje
     const yms = new Set(mesesSeleccionados());
     serie = (DATA.serieDiaria||[]).filter(d=> periodoEsAll() || yms.has(d.ymd.slice(0,7)));
-    labels = serie.map(d=> curMonths.length===1 ? d.ymd.slice(8) : d.ymd.slice(5));   // dd (un mes) o mm-dd
+    labels = serie.map(d=> d.ymd.slice(8));   // dd (siempre un único mes en modo día)
   }else{
     serie = serieSamples().filter(m=>'manual' in m);
     labels = serie.map(m=>`${m.label.slice(0,3)} ${m.anio.slice(2)}`);
   }
   if(!serie.length){ destroy('graMR'); return; }
-  const tipoBar = mrGran==='dia' && serie.length>62;   // muchos días: sin borderRadius
+  const tipoBar = gran==='dia' && serie.length>62;   // muchos días: sin borderRadius
+  const dsRobot  = {label:t('ds_robot'), data:serie.map(m=>valTipo(m.robot,m.robotSample)),   backgroundColor:C.robot, borderRadius:tipoBar?0:3, stack:'p'};
+  const dsManual = {label:t('ds_manual'),data:serie.map(m=>valTipo(m.manual,m.manualSample)), backgroundColor:C.lab,   borderRadius:tipoBar?0:3, stack:'p'};
+  const datasets = estTipo==='robot' ? [dsRobot] : estTipo==='manual' ? [dsManual] : [dsRobot,dsManual];
   destroy('graMR');
   charts.graMR = new Chart(document.getElementById('chGraMR'),{
     type:'bar',
-    data:{labels,datasets:[
-      {label:t('ds_robot'),data:serie.map(m=>valTipo(m.robot,m.robotSample)),backgroundColor:C.robot,borderRadius:tipoBar?0:3,stack:'p'},
-      {label:t('ds_manual'),data:serie.map(m=>valTipo(m.manual,m.manualSample)),backgroundColor:C.lab,borderRadius:tipoBar?0:3,stack:'p'}
-    ]},
+    data:{labels,datasets},
     options:gridOpts({plugins:{legend:{display:true,position:'bottom'}},
-      scales:{x:{stacked:true,grid:{color:C.grid},ticks:{maxTicksLimit:mrGran==='dia'?20:24}},
+      scales:{x:{stacked:true,grid:{color:C.grid},ticks:{maxTicksLimit:gran==='dia'?20:24}},
               y:{stacked:true,grid:{color:C.grid},beginAtZero:true}}})
   });
 }
@@ -1345,7 +1386,7 @@ function renderGraEstaciones(){
   const estMes = DATA.estacionesMes;   // {modulo:{ym:pesadas}} (si falta, se usan totales)
   const estMesS = DATA.estacionesMesSample||{};
   const est = base
-    .filter(e=>estEnFiltro(e.modulo))
+    .filter(e=>estEnFiltro(e.modulo) && (estTipo==='ambas' || e.tipo===estTipo))
     .map(e=>({...e, pesadas: estMes ? valTipo(sumPeriodoYm(estMes[e.modulo]), sumPeriodoYm(estMesS[e.modulo])) : e.pesadas}))
     .filter(e=>e.pesadas>0)
     .sort((a,b)=>b.pesadas-a.pesadas);
@@ -1384,34 +1425,23 @@ function barEstacion(canvasId, chartKey, valores){
 // Pesadas y peso por estación manual: periodo activo + tipo (Producción/Muestra/Ambos).
 function renderEstPesadas(){ const em=DATA.estManual; if(em) barEstacion('chEstPesadas','estPesadas', valoresPeriodoTipo(em.pesadasMes, em.pesadasMesSample, em.pesadas, em.modulos)); }
 function renderEstPeso(){    const em=DATA.estManual; if(em) barEstacion('chEstPeso','estPeso', valoresPeriodoTipo(em.pesoMes, em.pesoMesSample, em.peso, em.modulos)); }
+// Órdenes de muestra por estación (barras): órdenes distintas por técnico en el periodo. Solo estaciones manuales.
+function renderEstOrdenesBar(){ const em=DATA.estManual; if(em) barEstacion('chEstOrdenesBar','estOrdBar', valoresPeriodo(em.ordenesMes, null, em.modulos)); }
 
-// Órdenes de muestra por estación manual: líneas (una por técnico) en el tiempo. Toggle Mes/Día.
-let estOrdGran = 'mes';   // 'mes' | 'dia'
+// Órdenes de muestra por estación manual: líneas (una por técnico) en el tiempo. Granularidad automática.
 function renderEstOrdenes(){
   const em = DATA.estManual; if(!em){ destroy('estOrd'); return; }
-  // Chips de granularidad
-  const gc = document.getElementById('estOrdGranChips');
-  gc.innerHTML = [['mes','gran_mes'],['dia','gran_dia']]
-    .map(([k,lbl])=>`<button class="minichip${k===estOrdGran?' active':''}" data-g="${k}">${t(lbl)}</button>`).join('');
-  gc.querySelectorAll('.minichip').forEach(c=>c.onclick=()=>{ estOrdGran=c.dataset.g; renderEstOrdenes(); });
-
-  const esDia = estOrdGran==='dia';
+  const esDia = granAuto()==='dia';                      // día solo con un mes concreto seleccionado
   const fuente = esDia ? em.ordenesDia : em.ordenesMes;  // {modulo: {ymd|ym: n}}
   const mods = em.modulos.filter(estEnFiltro);           // respeta el filtro de estación
   // ¿una clave de periodo (ym o ymd) cae en el filtro global activo? (mesesSeleccionados)
   const ymsSel = new Set(mesesSeleccionados());
   const enFiltro = key => periodoEsAll() ? true : ymsSel.has(key.slice(0,7));
-  // Unión de periodos presentes en cualquier estación, dentro del filtro.
-  // En modo Día sin año ni mes serían cientos de días → exigimos elegir año/mes.
-  const sinAcotar = !curYears.length && !curMonths.length;
-  let periodos = [];
-  if(!(esDia && sinAcotar)){
-    const set = new Set();
-    mods.forEach(m=>Object.keys(fuente[m]||{}).forEach(k=>{ if(enFiltro(k)) set.add(k); }));
-    periodos = [...set].sort();
-  }
+  const set = new Set();
+  mods.forEach(m=>Object.keys(fuente[m]||{}).forEach(k=>{ if(enFiltro(k)) set.add(k); }));
+  const periodos = [...set].sort();
   const palette=[C.accent, C.accent2, '#6aa84f', C.pink, '#8e7cc3', '#d9a23c'];
-  const labels = periodos.map(p=> esDia ? (curMonths.length===1 ? p.slice(8) : p.slice(5)) : mesLabelCorto(p));
+  const labels = periodos.map(p=> esDia ? p.slice(8) : mesLabelCorto(p));
   destroy('estOrd');
   charts.estOrd = new Chart(document.getElementById('chEstOrdenes'),{
     type:'line',
@@ -2413,6 +2443,21 @@ function aggScopes(yms){
   _aggCache[ckey] = out;
   return out;
 }
+// Scope vacío (mismo esqueleto que ALL pero a cero): para un periodo FILTRADO sin datos
+// (p.ej. 2024+YTD en Dubai, cuyos datos empiezan en julio → ene-jun no existe). NUNCA hay
+// que devolver ALL en un periodo filtrado: mostraría TODO como si no hubiera filtro (era un bug).
+const _emptyScopeCache = {};
+function emptyScope(){
+  if(_emptyScopeCache[CENTER]) return _emptyScopeCache[CENTER];
+  const base = DATA.scopes.ALL || {kpis:{}};
+  const out = {};
+  for(const [key,val] of Object.entries(base)){
+    if(key==='kpis'){ out.kpis = {}; Object.keys(val||{}).forEach(k=>out.kpis[k]=0); }
+    else if(Array.isArray(val)) out[key] = [];
+    else out[key] = val;
+  }
+  return (_emptyScopeCache[CENTER] = out);
+}
 // Scope correspondiente al filtro global actual.
 function scopeActual(){
   if(periodoEsAll()) return DATA.scopes.ALL;
@@ -2420,8 +2465,8 @@ function scopeActual(){
   if(curYears.length===1 && !curMonths.length && !ytdGlobal && DATA.scopes[curYears[0]])
     return DATA.scopes[curYears[0]];
   const yms = mesesSeleccionados();
-  if(!yms.length) return DATA.scopes.ALL;
-  if(yms.length===1) return DATA.scopes[yms[0]] || DATA.scopes.ALL;
+  if(!yms.length) return emptyScope();                     // periodo filtrado sin datos → vacío, NO ALL
+  if(yms.length===1) return DATA.scopes[yms[0]] || emptyScope();
   return aggScopes(yms);
 }
 
@@ -2429,7 +2474,9 @@ function scopeActual(){
 // Si varios años o todos: una entrada por año (agregada). Respeta mes/YTD.
 function serieActual(){
   const s = DATA.serieMensual || [];
-  const yms = new Set(mesesSeleccionados().length ? mesesSeleccionados() : s.map(m=>m.ym));
+  // Sin filtro → todos los meses. Filtrado (aunque quede vacío) → solo los seleccionados
+  // (no caer a "todos", que mostraría la serie completa en un periodo sin datos).
+  const yms = new Set(periodoEsAll() ? s.map(m=>m.ym) : mesesSeleccionados());
   const sel = s.filter(m=>yms.has(m.ym));
   const anios = aniosEfectivos();
   // Un solo año elegido y sin meses concretos → desglose mensual de ese año

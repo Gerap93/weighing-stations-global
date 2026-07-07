@@ -10,15 +10,21 @@ se procesa por STREAMING (sin cargarla en memoria), no se descarta.
 
 Uso:
     python build_roxane.py
-Lee:  ./location/granollers/Data_Roxane_Gra.xlsx
+Lee:  ./location/granollers/Data_Roxane_Gra.xlsx  (maestro histórico)
         · hoja "Stats Samples"      → serie mensual (órdenes prod., pours, muestras, días)
         · hoja "Stats MP"           → top materias primas 2025 (producción y sample requests)
         · hoja "Exportación MANUAL" → pesadas individuales; de la col. "Módulo" se deriva
           manual (MWS_*, técnicos) vs robot (ROXY_*). Genera: manual/robot por mes,
           ranking de estaciones de pesaje y peso dosificado por vía.
+      + ./location/granollers/Roxane_YYYYMM.xlsx  (incrementos mensuales, opcionales)
+        Exportaciones crudas de pesadas de un solo mes (mismo formato que "Exportación
+        MANUAL", con ligeras variaciones de columnas → se localizan por NOMBRE de cabecera).
+        Para meses sin fila en "Stats Samples", las métricas de órdenes se DERIVAN del crudo:
+        sampleOrders = OP-cliente muestra distintas · prodOrders = OP-cliente producción
+        distintas · pours = nº de pesadas de producción · días = fechas distintas.
 Escribe: ./location/granollers/data.json
 """
-import os, re, io, json, zipfile
+import os, re, io, json, glob, zipfile
 from datetime import datetime, timedelta
 from xml.etree.ElementTree import iterparse
 
@@ -156,15 +162,61 @@ def parse_stats_mp(rows):
     }
 
 
-# ---- Exportación MANUAL: pesadas individuales (streaming, ~625k filas) ----
-def parse_pesadas(z, sheet_path, shared):
-    """Recorre la hoja de pesadas SIN cargarla en memoria. De la columna "Módulo"
-    deriva manual (MWS_*) vs robot (ROXY_*). Devuelve agregados:
-      · porMes:   {ym: {manual, robot}}  (nº de pesadas)
-      · estaciones: {modulo: nº pesadas}
-      · pesoVia:  {manual, robot}  (gramos dosificados, col. "Cantidad dosificada")
-    Columnas (1-based): 1=fecha serial, 13=cantidad dosificada (gr), 18=Módulo.
-    """
+# ---- Lectura genérica de hojas de pesadas (maestro + incrementos mensuales) ----
+def iter_rows(z, sheet_path, shared):
+    """Generador STREAMING: produce {num_columna: valor} por cada fila (incl. cabecera)."""
+    with z.open(sheet_path) as fh:
+        for _, el in iterparse(fh):
+            if el.tag != NS + 'row':
+                continue
+            cells = {}
+            for c in el.findall(NS + 'c'):
+                v = c.find(NS + 'v')
+                if v is not None:
+                    cells[col_to_num(c.get('r'))] = shared[int(v.text)] if c.get('t') == 's' else v.text
+            el.clear()
+            yield cells
+
+
+def resolver_columnas(header_cells):
+    """Localiza las columnas de la hoja de pesadas por NOMBRE de cabecera, para ser
+    robustos a los cambios de layout entre el maestro (18 col.) y los incrementos
+    mensuales (17 col.). OJO: la col. "dosificada" viene etiquetada como (gr) en el
+    maestro y (mg) en los mensuales, PERO los valores están en gramos en ambos casos
+    (verificado empíricamente) → no se convierte de unidades."""
+    def find(*subs, exact=None):
+        for k, v in header_cells.items():
+            t = (v or '').strip()
+            if exact and t == exact:
+                return k
+        for k, v in header_cells.items():
+            t = (v or '').strip().lower()
+            if any(s.lower() in t for s in subs):
+                return k
+        return None
+    return {
+        'fecha':  find('inicio de la pesada', exact='Inicio de la pesada'),
+        'op':     find('op cliente', exact='Código de OP Cliente'),
+        'tipo':   find('typeof', exact='TypeOF'),
+        'dos':    find('dosificada'),
+        'modulo': find('módulo', 'modulo', exact='Módulo'),
+    }
+
+
+def fuente_pesadas(z, sheet_path, shared):
+    """(rows_iter_sin_cabecera, colmap) para una hoja de pesadas. Consume la 1ª fila
+    (cabecera) para localizar las columnas por nombre; el resto queda para streaming."""
+    it = iter_rows(z, sheet_path, shared)
+    return it, resolver_columnas(next(it))
+
+
+# ---- Pesadas individuales (streaming): une el maestro + los incrementos mensuales ----
+def parse_pesadas(sources):
+    """Recorre una o varias hojas de pesadas SIN cargarlas en memoria y las AGREGA
+    juntas. `sources` = lista de (rows_iter, colmap), donde rows_iter ya NO incluye la
+    cabecera y colmap = resolver_columnas(cabecera). De la col. "Módulo" deriva manual
+    (MWS_*) vs robot (ROXY_*). Devuelve los agregados de pesaje + `derivedByYm` con las
+    métricas de órdenes derivadas del crudo (para meses sin fila en "Stats Samples")."""
     from collections import defaultdict, Counter
     porMes = defaultdict(lambda: [0, 0])   # ym  -> [manual, robot]
     porDia = defaultdict(lambda: [0, 0])   # ymd -> [manual, robot]  (detalle diario)
@@ -183,43 +235,44 @@ def parse_pesadas(z, sheet_path, shared):
     porDiaS    = defaultdict(lambda: [0, 0])                  # ymd -> [manual, robot] (muestra)
     pesMesEstS  = defaultdict(lambda: defaultdict(int))       # modulo -> ym -> pesadas muestra
     pesoMesEstS = defaultdict(lambda: defaultdict(float))     # modulo -> ym -> gramos muestra (manual)
+    # Métricas de órdenes derivadas del crudo, por ym (para meses sin "Stats Samples")
+    sampleOP = defaultdict(set)            # ym -> set(OP cliente) con TypeOF=Echantillon
+    prodOP   = defaultdict(set)            # ym -> set(OP cliente) con TypeOF=Production
+    prodPes  = defaultdict(int)            # ym -> nº pesadas de producción  (= "pours")
+    fechas   = defaultdict(set)            # ym -> set(ymd)  (para "días")
     EPOCH = datetime(1899, 12, 30)
-    first = True
-    with z.open(sheet_path) as fh:
-        for _, el in iterparse(fh):
-            if el.tag != NS + 'row':
-                continue
-            if first:                       # saltar cabecera
-                first = False; el.clear(); continue
-            cells = {}
-            for c in el.findall(NS + 'c'):
-                v = c.find(NS + 'v')
-                if v is not None:
-                    cells[col_to_num(c.get('r'))] = shared[int(v.text)] if c.get('t') == 's' else v.text
-            el.clear()
-            mod = cells.get(18)
+    for rows, cm in sources:
+        cF, cO, cT, cD, cM = cm['fecha'], cm['op'], cm['tipo'], cm['dos'], cm['modulo']
+        for cells in rows:
+            mod = cells.get(cM)
             if not mod:
                 continue
             es_robot = str(mod).startswith('ROXY')
             es_manual = mod in PERSONAL_MWS
-            es_muestra = (cells.get(5) == 'Echantillon')   # tipo: muestra vs producción
+            es_muestra = (cells.get(cT) == 'Echantillon')   # tipo: muestra vs producción
             idx = 1 if es_robot else 0
             estaciones[mod] += 1
+            op = cells.get(cO)
             # fecha desde el serial de Excel → agregación mensual y diaria
             ym = ymd = None
             try:
-                d = EPOCH + timedelta(days=float(cells.get(1)))
+                d = EPOCH + timedelta(days=float(cells.get(cF)))
                 ym, ymd = d.strftime('%Y-%m'), d.strftime('%Y-%m-%d')
                 porMes[ym][idx] += 1
                 porDia[ymd][idx] += 1
                 pesMesEst[mod][ym] += 1          # pesadas por estación y mes (todas)
+                fechas[ym].add(ymd)
                 if es_muestra:
                     porMesS[ym][idx] += 1
                     porDiaS[ymd][idx] += 1
                     pesMesEstS[mod][ym] += 1
+                    if op: sampleOP[ym].add(op)
+                else:
+                    prodPes[ym] += 1
+                    if op: prodOP[ym].add(op)
             except (TypeError, ValueError):
                 pass
-            dos = num(cells.get(13))
+            dos = num(cells.get(cD))
             if dos:
                 pesoVia[idx] += dos
             # Detalle por estación manual
@@ -228,12 +281,10 @@ def parse_pesadas(z, sheet_path, shared):
                     pesoEst[mod] += dos
                     if ym: pesoMesEst[mod][ym] += dos   # peso por estación y mes
                     if ym and es_muestra: pesoMesEstS[mod][ym] += dos
-                # OPs de muestra distintas (TypeOF=Echantillon, col2=OP cliente)
-                if es_muestra:
-                    op = cells.get(2)
-                    if op:
-                        if ym:  opsMesEst[mod][ym].add(op)
-                        if ymd: opsDiaEst[mod][ymd].add(op)
+                # OPs de muestra distintas (TypeOF=Echantillon, OP cliente)
+                if es_muestra and op:
+                    if ym:  opsMesEst[mod][ym].add(op)
+                    if ymd: opsDiaEst[mod][ymd].add(op)
 
     # Lista ordenada de estaciones manuales (para ejes estables en el front)
     mws = [k for k in PERSONAL_MWS if estaciones.get(k)]
@@ -256,7 +307,19 @@ def parse_pesadas(z, sheet_path, shared):
     # Desglose mensual de pesadas por estación para el ranking (incluye robots ROXY)
     estacionesMes = {mod: dict(sorted(pesMesEst[mod].items())) for mod in estaciones}
     estacionesMesSample = {mod: dict(sorted(pesMesEstS[mod].items())) for mod in estaciones if pesMesEstS[mod]}
+    # Métricas de órdenes derivadas del crudo, por ym (validado contra "Stats Samples":
+    # sampleOrders y prodOrders coinciden exactamente; pours = pesadas de producción;
+    # días = fechas distintas, aprox. ±1-2 vs. el calendario laboral oficial).
+    derivedByYm = {}
+    for ym in set(fechas) | set(sampleOP) | set(prodOP) | set(prodPes):
+        so, dd = len(sampleOP[ym]), len(fechas[ym])
+        derivedByYm[ym] = {
+            'sampleOrders': so, 'prodOrders': len(prodOP[ym]),
+            'pours': prodPes[ym], 'dias': dd,
+            'samplesDia': round(so / dd, 2) if dd else 0,
+        }
     return {
+        'derivedByYm': derivedByYm,
         'porMes': {ym: {'manual': v[0], 'robot': v[1]} for ym, v in porMes.items()},
         'porMesSample': {ym: {'manual': v[0], 'robot': v[1]} for ym, v in porMesS.items()},
         'serieDiaria': [{'ymd': d, 'manual': v[0], 'robot': v[1],
@@ -306,10 +369,36 @@ def main():
     serie = parse_stats_samples(samples_rows)
     mp = parse_stats_mp(mp_rows)
 
-    # Pesadas individuales (manual vs robot) por streaming de la hoja grande
-    print("  Procesando 'Exportación MANUAL' por streaming (~625k filas)…")
-    pes = parse_pesadas(z, smap['Exportación MANUAL'], shared)
-    # Enriquecer la serie mensual con manual/robot del mismo ym (+ variante solo muestra)
+    # Pesadas individuales (manual vs robot) por streaming: maestro + incrementos mensuales
+    print("  Procesando pesadas por streaming (maestro 'Exportación MANUAL' ~625k filas"
+          " + incrementos mensuales)…")
+    sources = [fuente_pesadas(z, smap['Exportación MANUAL'], shared)]
+    zips_mensuales = []   # mantener los zips abiertos mientras se consumen los generadores
+    for path in sorted(glob.glob(os.path.join(BASE, "location", "granollers", "Roxane_*.xlsx"))):
+        zi = zipfile.ZipFile(path); zips_mensuales.append(zi)
+        hoja = next(iter(sheet_map(zi).values()))     # cada libro mensual tiene una sola hoja
+        sources.append(fuente_pesadas(zi, hoja, load_shared_strings(zi)))
+        print(f"    + incremento mensual: {os.path.basename(path)}")
+    pes = parse_pesadas(sources)
+
+    # Meses presentes en el crudo pero SIN fila en "Stats Samples" (p. ej. mayo/junio):
+    # se sintetiza su fila de serie con las métricas de órdenes derivadas del crudo.
+    have = {m['ym'] for m in serie}
+    for ym in sorted(pes['derivedByYm']):
+        if ym in have:
+            continue
+        dk = pes['derivedByYm'][ym]
+        y, mm = ym.split('-'); mm = int(mm)
+        serie.append({
+            'ym': ym, 'anio': y, 'mes': mm, 'label': MESES_ES[mm - 1],
+            'dias': dk['dias'], 'prodOrders': dk['prodOrders'], 'pours': dk['pours'],
+            'sampleOrders': dk['sampleOrders'], 'samplesDia': dk['samplesDia'],
+        })
+        print(f"    · mes derivado del crudo: {ym} "
+              f"({dk['sampleOrders']} muestras · {dk['prodOrders']} prod · {dk['pours']} pours)")
+    serie.sort(key=lambda m: m['ym'])
+
+    # Enriquecer TODA la serie con manual/robot del mismo ym (+ variante solo muestra)
     for m in serie:
         mr = pes['porMes'].get(m['ym'], {'manual': 0, 'robot': 0})
         m['manual'] = mr['manual']

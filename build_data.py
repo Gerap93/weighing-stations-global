@@ -61,28 +61,40 @@ def parse_date(s):
     return None
 
 
-def clasificar(cod, nom, resp_ing):
-    """Replica las columnas calculadas del Power Query."""
+def clasificar(cod, nom, resp_ing, form_resp=''):
+    """Replica las columnas calculadas del Power Query.
+
+    Regla especial ALANGLOIS (Dubai): sus fórmulas marcan el tipo con el sufijo BVF/TVF
+    en el nombre en vez de las palabras BASE/TRIAL. Cuando el 'Formula resp.' es ALANGLOIS
+    y el nombre contiene BVF → Base, TVF → Trial, y PREVALECE sobre BASE/TRIAL (muchos
+    nombres llevan 'E-BASE' pero es el sufijo BVF/TVF el que dice si esa línea es la Base
+    o el Trial de esa familia; ej. 'CACAO BEAN E-BASE TVF - 2' es un Trial, no una Base).
+    """
     codU = cod.upper()
     nomU = nom.upper()
     es_bxs = 1 if codU.startswith('BXS') else 0
+    alanglois = ((form_resp or '').strip().upper() == 'ALANGLOIS'
+                 and ('BVF' in nomU or 'TVF' in nomU))
     if es_bxs:
         es_base = es_trial = es_completa = 0
+        tipo_det = 'Disoluciones'
+    elif alanglois:
+        es_base = 1 if 'BVF' in nomU else 0
+        es_trial = 1 if 'TVF' in nomU else 0
+        es_completa = 0
+        tipo_det = 'Base + Trial' if (es_base and es_trial) else ('Base' if es_base else 'Trial')
     else:
         es_base = 1 if 'BASE' in nomU else 0
         es_trial = 1 if 'TRIAL' in nomU else 0
         es_completa = 1 if ('BASE' not in nomU and 'TRIAL' not in nomU) else 0
-
-    if es_bxs:
-        tipo_det = 'Disoluciones'
-    elif 'BASE' in nomU and 'TRIAL' in nomU:
-        tipo_det = 'Base + Trial'
-    elif 'BASE' in nomU:
-        tipo_det = 'Base'
-    elif 'TRIAL' in nomU:
-        tipo_det = 'Trial'
-    else:
-        tipo_det = 'Fórmula completa'
+        if 'BASE' in nomU and 'TRIAL' in nomU:
+            tipo_det = 'Base + Trial'
+        elif 'BASE' in nomU:
+            tipo_det = 'Base'
+        elif 'TRIAL' in nomU:
+            tipo_det = 'Trial'
+        else:
+            tipo_det = 'Fórmula completa'
 
     tipo_linea = 'Robot' if resp_ing.strip() == '' else 'Lab'
     return es_bxs, es_base, es_trial, es_completa, tipo_det, tipo_linea
@@ -121,8 +133,9 @@ def cargar_filas():
                 cod = (r.get('Código fórmula') or '').strip()
                 nom = (r.get('Nombre fórmula') or '').strip()
                 resp_ing = (r.get('Ingredient resp.') or '').strip()
+                form_resp = (r.get('Formula resp.') or '').strip()
                 es_bxs, es_base, es_trial, es_completa, tipo_det, tipo_linea = \
-                    clasificar(cod, nom, resp_ing)
+                    clasificar(cod, nom, resp_ing, form_resp)
                 fin = parse_date(r.get('Fin de prod.'))
                 rows.append({
                     'archivo': name,
@@ -132,7 +145,7 @@ def cargar_filas():
                     'nombreIngrediente': (r.get('Nombre ingrediente') or '').strip(),
                     'pesoIngr': num(r.get('Peso ingr. [g]')),
                     'lote': (r.get('Número de lote') or '').strip(),
-                    'formulaResp': (r.get('Formula resp.') or '').strip(),
+                    'formulaResp': form_resp,
                     'ingredientResp': resp_ing,
                     'finProd': fin,
                     'finProdRaw': (r.get('Fin de prod.') or '').strip(),
